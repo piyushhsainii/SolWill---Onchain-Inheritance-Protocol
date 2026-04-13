@@ -1,5 +1,5 @@
 use anchor_lang::{prelude::*, system_program::{self, transfer}};
-use anchor_spl::{ associated_token::{self, AssociatedToken}, token::Transfer, token_interface::{TokenAccount, TokenInterface}};
+use anchor_spl::{ associated_token::{self, AssociatedToken}, token::{Transfer, TransferChecked, transfer_checked}, token_interface::{Mint, TokenAccount, TokenInterface}};
 
 use crate::{accountdata::{Heir, HeirStatus, Vault, WillAccount}, error::Errors};
 
@@ -34,25 +34,30 @@ pub struct Claim<'info> {
 }
 
 
-pub fn claim(ctx:Context<Claim>, assets:Vec<Pubkey>) -> Result<()> {
+pub fn claim<'info>(ctx:Context<'_, '_, 'info, 'info, Claim<'info>>) -> Result<()> {
     // check if deadline has passed
     let current_time = Clock::get()?.unix_timestamp;
-    require!(current_time > ctx.accounts.will_account.last_check_in + ctx.accounts.will_account.interval, Errors::Will_Active);
+    let will_account = ctx.accounts.will_account.clone();
+    let heir_account = ctx.accounts.heir_account.clone();
+    let assets = ctx.accounts.will_account.assets.clone();
+    let program = ctx.accounts.system_program.to_account_info().clone();
+    let token_program = ctx.accounts.token_program.clone();
+    let accounts = ctx.remaining_accounts;
+    require!(current_time > will_account.last_check_in + will_account.interval, Errors::Will_Active);
 
     //check to ensure that will is not already Claimed
-    require!(ctx.accounts.will_account.claimed != true, Errors::Will_Already_Claimed);
-    require!(ctx.accounts.heir_account.status == HeirStatus::Active, Errors::Will_Already_Claimed);
+    require!(will_account.claimed != true, Errors::Will_Already_Claimed);
+    require!(heir_account.status == HeirStatus::Active, Errors::Will_Already_Claimed);
 
     // check if given heir_account_address matches the one stored in config of heir account
-    require!(ctx.accounts.heir_account.wallet_address == ctx.accounts.heir_account_address.key(), Errors::Heir_Not_Valid);
+    require!(heir_account.wallet_address == ctx.accounts.heir_account_address.key(), Errors::Heir_Not_Valid);
 
-    let will_account =ctx.accounts.will_account.key();
-    let seeds:&[&[&[u8]]] = &[&[b"vault", will_account.as_ref(), &[ctx.bumps.vault_account]]];
+    let will_account_key = will_account.key();
+    let seeds:&[&[&[u8]]] = &[&[b"vault", will_account_key.as_ref(), &[ctx.bumps.vault_account]]];
     let vault =  &ctx.accounts.vault_account;
     
-    let sol_amount = vault.sol_balance.checked_mul(ctx.accounts.heir_account.bps as u64).ok_or(Errors::Math_Error)?.checked_div(10000).ok_or(Errors::Math_Error)?;
-
-    let program = ctx.accounts.system_program.to_account_info();
+    let sol_amount = vault.sol_balance.checked_mul(heir_account.bps as u64).ok_or(Errors::Math_Error)?.checked_div(10000).ok_or(Errors::Math_Error)?;
+    require!(sol_amount > 0, Errors::Math_Error);
     // transfer the sol amount to the heir
 
     let ix = CpiContext::new_with_signer(program,
@@ -67,19 +72,20 @@ pub fn claim(ctx:Context<Claim>, assets:Vec<Pubkey>) -> Result<()> {
     ctx.accounts.heir_account.status = crate::accountdata::HeirStatus::Claimed;
 
     // handle spl tokens transfer
-    let assets = &ctx.accounts.will_account.assets;
-    let accounts = ctx.remaining_accounts;
     // ensures
     require!(assets.len() * 3 == accounts.len(), Errors::ClaimFundsAccountsNotValid);
     require!(accounts.len() % 3 == 0, Errors::ClaimFundsAccountsNotValid);
     let mut i = 0;
     let mut processed_mints: Vec<Pubkey> = Vec::new();
+    let wallet_key = will_account.key();
+    let signer_seeds:&[&[&[u8]]] = &[&[b"vault", wallet_key.as_ref(),&[ctx.bumps.vault_account]] ];
 
     while i < accounts.len() {
         let vault_ata = &accounts[i];
         let heir_ata = &accounts[i + 1];
         let vault_mint      = &accounts[i + 2];
         let vault_data = InterfaceAccount::<TokenAccount>::try_from(&vault_ata)?;
+        let vault_mint_info =  InterfaceAccount::<Mint>::try_from(&vault_mint)?;
 
         // ensures mint is not passed twice
         require!(
@@ -93,6 +99,7 @@ pub fn claim(ctx:Context<Claim>, assets:Vec<Pubkey>) -> Result<()> {
 
         // check if heir ata is created or not
         require!(!vault_ata.data_is_empty(), Errors::VaultATAInvalid);
+      
 
         // create heir ata if not already present
         if(heir_ata.data_is_empty()) {
@@ -101,7 +108,7 @@ pub fn claim(ctx:Context<Claim>, assets:Vec<Pubkey>) -> Result<()> {
 
             let cpi_accounts= associated_token::Create {
                 associated_token: heir_ata.to_account_info(),
-                authority:ctx.accounts.heir_account.to_account_info(),
+                authority:ctx.accounts.heir_account_address.to_account_info(),
                 mint:vault_mint.to_account_info(),
                 payer:ctx.accounts.signer.to_account_info(),
                 system_program:ctx.accounts.system_program.to_account_info(),
@@ -113,23 +120,24 @@ pub fn claim(ctx:Context<Claim>, assets:Vec<Pubkey>) -> Result<()> {
 
         }
 
-        let signer_seeds:&[&[&[u8]]] = &[&[b"vault", ctx.accounts.will_account.key().as_ref(),&[ctx.bumps.vault_account]], ];
-
         let total_spl_balance = assets.iter().find(|data| data.mint == vault_data.mint).ok_or(Errors::MintAccountNotValid)?;
         // calcualting heir share balance
-        let user_share = total_spl_balance.balance.checked_mul(ctx.accounts.heir_account.bps as u64)?.checked_div(10000).ok_or(Errors::Math_Error)?;;
+        let user_share = total_spl_balance.balance.checked_mul(ctx.accounts.heir_account.bps as u64).ok_or(Errors::Math_Error)?.checked_div(10000).ok_or(Errors::Math_Error)?;
+
+        require!(user_share > 0, Errors::Math_Error);
 
         // transfer spl token from vault ata
-           let spl_token_ix = CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), 
-           Transfer {
+           let spl_token_ix = CpiContext::new_with_signer(token_program.to_account_info(), 
+           TransferChecked {
                 from:vault_ata.to_account_info(),
                 to:heir_ata.to_account_info(),
-               authority:ctx.accounts.vault_account.to_account_info()
+               authority:ctx.accounts.vault_account.to_account_info(),
+               mint:vault_mint.to_account_info()
             },
             signer_seeds
         );
 
-        anchor_spl::token::transfer(spl_token_ix, user_share)?;
+        transfer_checked(spl_token_ix, user_share, vault_mint_info.decimals)?;
         processed_mints.push(vault_mint.key());
         i+=3;
     }
