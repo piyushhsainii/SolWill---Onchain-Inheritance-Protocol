@@ -1,0 +1,321 @@
+/* ─── Section wrapper with dotted grid ─────────────────────────────── */
+.howSection {
+  position: relative;
+  overflow: hidden;
+}
+
+/*
+  Dotted grid using a radial-gradient trick.
+  Dots are 1.5px, spaced 28px apart, in the brand neutral color.
+  Fades out toward the bottom so it doesn't bleed into the next section.
+*/
+.dotGrid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    var(--border-mid) 1.5px,
+    transparent 1.5px
+  );
+  background-size: 28px 28px;
+  /* Fade top + bottom edges */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 12%,
+    black 70%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    black 12%,
+    black 70%,
+    transparent 100%
+  );
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Content containers ────────────────────────────────────────────── */
+.how {
+  position: relative;
+  z-index: 1;
+  padding: 100px 48px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* ─── Steps grid ────────────────────────────────────────────────────── */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-top: 56px;
+  border: 1px solid var(--border-mid);
+  border-radius: 20px;
+  overflow: hidden;
+  /* Glass-like card sitting on the dot grid */
+  background: var(--white);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.step {
+  padding: 36px 28px 32px;
+  background: var(--white);
+  border-right: 1px solid var(--border-mid);
+  position: relative;
+  transition: background 0.2s ease;
+  /* Subtle top accent line that appears on hover */
+}
+
+.step::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--purple-mid, #7f77dd), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.stepActive {
+  background: var(--surface) !important;
+}
+
+.stepActive::before {
+  opacity: 1;
+}
+
+.step:last-child {
+  border-right: none;
+}
+
+/* Step number — large, decorative, serif */
+.stepNum {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: 36px;
+  color: var(--border-mid);
+  line-height: 1;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+  transition: color 0.2s;
+}
+
+.stepActive .stepNum {
+  color: var(--purple-mid, #7f77dd);
+}
+
+/* Icon pill */
+.stepIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  transition: transform 0.2s ease;
+}
+
+.stepTitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+.stepDesc {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-weight: 300;
+  line-height: 1.65;
+}
+
+/* Connector arrow badge between steps */
+.stepArrow {
+  position: absolute;
+  top: 36px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  background: var(--white);
+  border: 1px solid var(--border-mid);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── State flow ────────────────────────────────────────────────────── */
+.flow {
+  padding: 0 48px 100px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.flowRow {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border-mid);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 56px;
+  background: var(--white);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.flowNode {
+  flex: 1;
+  padding: 28px 20px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+  background: var(--white);
+  transition: background 0.18s ease;
+  cursor: default;
+}
+
+.flowNode:last-child {
+  border-right: none;
+}
+
+.flowNodeIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.flowNodeLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  margin-bottom: 5px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.flowNodeDesc {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.flowArrow {
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  flex-shrink: 0;
+  font-size: 14px;
+  /* sits outside the border-radius overflow, so hide it */
+  /* Actually the arrows are between nodes INSIDE the flowRow */
+}
+
+/* ─── Flow note ─────────────────────────────────────────────────────── */
+.flowNote {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 20px;
+  font-weight: 300;
+  line-height: 1.6;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-mid);
+}
+
+.inlineCode {
+  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--purple, #534ab7);
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .how,
+  .flow {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .steps {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Re-border for 2-col grid */
+  .step:nth-child(2) {
+    border-right: none;
+  }
+  .step:nth-child(3) {
+    border-top: 1px solid var(--border-mid);
+  }
+  .step:nth-child(4) {
+    border-top: 1px solid var(--border-mid);
+    border-right: none;
+  }
+
+  .stepArrow {
+    display: none;
+  }
+
+  .flowRow {
+    flex-wrap: wrap;
+  }
+
+  .flowArrow {
+    display: none;
+  }
+
+  .flowNode {
+    flex: 1 1 45%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .flowNode:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .how {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+  }
+
+  .step {
+    border-right: none;
+    border-bottom: 1px solid var(--border-mid);
+  }
+
+  .step:last-child {
+    border-bottom: none;
+  }
+
+  .flowNode {
+    flex: 1 1 100%;
+  }
+}

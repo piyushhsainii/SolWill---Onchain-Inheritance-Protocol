@@ -1,0 +1,124 @@
+.section {
+  background: var(--ink);
+  padding: 100px 48px;
+  color: var(--white);
+}
+
+.inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 16px;
+}
+
+.h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  margin-bottom: 20px;
+  max-width: 640px;
+}
+
+.h2 em {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sub {
+  font-size: 17px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 300;
+  line-height: 1.7;
+  max-width: 520px;
+  margin-bottom: 56px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+}
+
+.criterion {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 28px 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.criterion.first {
+  border-radius: 12px 0 0 12px;
+}
+
+.criterion.last {
+  border-radius: 0 12px 12px 0;
+  border-right: none;
+}
+
+.score {
+  font-family: 'Instrument Serif', serif;
+  font-size: 36px;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.name {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.desc {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.note {
+  margin-top: 40px;
+  padding: 24px 28px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+.note strong {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.inlineCode {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+@media (max-width: 900px) {
+  .section { padding: 60px 24px; }
+  .grid { grid-template-columns: 1fr 1fr; }
+  .criterion { border-radius: 0 !important; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .criterion:last-child { border-bottom: none; }
+}
+
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+}

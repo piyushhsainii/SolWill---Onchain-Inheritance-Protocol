@@ -1,0 +1,44 @@
+.section {
+  padding: 120px 48px;
+  max-width: 1120px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.eyebrow {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+
+.h2 em {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.sub {
+  font-size: 18px;
+  color: var(--ink-2);
+  font-weight: 300;
+  margin-bottom: 40px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .section { padding: 80px 24px; }
+  .actions { flex-direction: column; }
+}
