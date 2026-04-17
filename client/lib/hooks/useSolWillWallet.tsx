@@ -1,109 +1,74 @@
 'use client'
 
 import { useMemo } from 'react'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
-import { useWallet } from '@solana/wallet-adapter-react'
-import { PublicKey, Transaction, VersionedTransaction } from '@solana/web3.js'
-
-type SupportedWalletType =
-    | 'phantom'
-    | 'solflare'
-    | 'backpack'
-    | 'privy'
-    | 'unknown'
+import { usePrivy } from '@privy-io/react-auth'
+import { PublicKey } from '@solana/web3.js'
+import { ConnectedStandardSolanaWallet, useWallets } from '@privy-io/react-auth/solana'
 
 type UnifiedWallet = {
     ready: boolean
     loading: boolean
     connected: boolean
-    walletType: SupportedWalletType
     address: string | null
     publicKey: PublicKey | null
-    signTransaction?: (
-        tx: Transaction | VersionedTransaction
-    ) => Promise<any>
-    signAllTransactions?: (
-        txs: (Transaction | VersionedTransaction)[]
-    ) => Promise<any>
     source: 'wallet-adapter' | 'privy' | null
-    raw: any
+    raw: ConnectedStandardSolanaWallet | null
 }
 
 export function useSollWillWallet(): UnifiedWallet {
-    const { ready, authenticated, user } = usePrivy()
+    const { ready, authenticated } = usePrivy()
     const { wallets } = useWallets()
-    const adapter = useWallet()
 
-    return useMemo<UnifiedWallet>(() => {
-        const primary = user?.wallet
-        const type =
-            primary?.walletClientType?.toLowerCase?.() ?? ''
-
-        const resolvedAddress =
-            primary?.address ??
-            wallets?.[0]?.address ??
-            adapter.publicKey?.toBase58() ??
-            null
-
-        const resolvedPublicKey =
-            adapter.publicKey ??
-            (resolvedAddress
-                ? new PublicKey(resolvedAddress)
-                : null)
-
-        const isExternal =
-            type.includes('phantom') ||
-            type.includes('solflare') ||
-            type.includes('backpack')
-
-        if (isExternal) {
+    return useMemo(() => {
+        const wallet = wallets?.[0]
+        // Privy still booting
+        if (!ready) {
             return {
-                ready,
-                loading: !ready,
-                connected: !!resolvedAddress,
-                walletType: 'phantom',
-                address: resolvedAddress,
-                publicKey: resolvedPublicKey,
-                signTransaction: adapter.signTransaction,
-                signAllTransactions:
-                    adapter.signAllTransactions,
+                ready: false,
+                loading: true,
+                connected: false,
+                address: null,
+                publicKey: null,
+                source: null,
+                raw: null,
+            }
+        }
+
+        // User logged in but wallets still being hydrated
+        if (authenticated && !wallet) {
+            return {
+                ready: true,
+                loading: true,
+                connected: false,
+                address: null,
+                publicKey: null,
+                source: null,
+                raw: null,
+            }
+        }
+
+        // Wallet exists
+        if (wallet?.address) {
+            return {
+                ready: true,
+                loading: false,
+                connected: true,
+                address: wallet.address,
+                publicKey: new PublicKey(wallet.address),
                 source: 'wallet-adapter',
-                raw: adapter,
+                raw: wallet,
             }
         }
 
-        const privyWallet = wallets?.[0]
-
-        if (type.includes('privy') && privyWallet) {
-            return {
-                ready,
-                loading: !ready,
-                connected: !!resolvedAddress,
-                walletType: 'privy',
-                address: resolvedAddress,
-                publicKey: resolvedPublicKey,
-                signTransaction: async (tx) =>
-                    await privyWallet.sign(tx as any),
-                signAllTransactions: async (txs) =>
-                    await Promise.all(
-                        txs.map((tx) =>
-                            privyWallet.sign(tx as any)
-                        )
-                    ),
-                source: 'privy',
-                raw: privyWallet,
-            }
-        }
-
+        // No wallet connected
         return {
-            ready,
-            loading: !ready,
-            connected: authenticated && !!resolvedAddress,
-            walletType: 'unknown',
-            address: resolvedAddress,
-            publicKey: resolvedPublicKey,
+            ready: true,
+            loading: false,
+            connected: false,
+            address: null,
+            publicKey: null,
             source: null,
             raw: null,
         }
-    }, [ready, authenticated, user, wallets, adapter])
+    }, [ready, authenticated, wallets])
 }

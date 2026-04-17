@@ -1,77 +1,78 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import {
     ArrowRight,
     Shield,
     Lock,
     Zap,
-    Users,
-    FileText,
-    Clock,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useWillStore } from '../store/useWillStore'
 import { usePrivy, useWallets, useLogin } from '@privy-io/react-auth'
 import PhoneMockup from '@/components/Landing/PhoneMockup'
+import { useMotionValue, useTransform, animate, motion } from 'framer-motion'
 
-/* ─── SolWill Logo SVG ─────────────────────────────────────────── */
-function SolWillLogo({ size = 32 }: { size?: number }) {
-    return (
-        <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 3L5 9V20C5 28.5 12 35.5 20 38C28 35.5 35 28.5 35 20V9L20 3Z"
-                fill="url(#shieldGradLight)" stroke="rgba(36,43,53,0.12)" strokeWidth="0.5" />
-            <path d="M14 16C14 16 16 14 20 14C24 14 26 16 26 18C26 20 24 21 20 21C16 21 14 22 14 24C14 26 16 28 20 28C24 28 26 26 26 26"
-                stroke="white" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-            <defs>
-                <linearGradient id="shieldGradLight" x1="5" y1="3" x2="35" y2="38" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#242b35" />
-                    <stop offset="1" stopColor="#3d4a5c" />
-                </linearGradient>
-            </defs>
-        </svg>
-    )
-}
-
-/* ─── Phone Mockup ─────────────────────────────────────────────── */
-
-/* ─── Slider ────────────────────────────────────────────────────── */
-function SlideToConnect({
-    onTriggered,
-    connecting,
-    done,
-}: {
+type SlideToConnectProps = {
     onTriggered: () => void
     connecting: boolean
     done: boolean
-}) {
+}
+
+export function SlideToConnect({ onTriggered, connecting, done }: SlideToConnectProps) {
     const trackRef = useRef<HTMLDivElement>(null)
-    const [dragX, setDragX] = useState(0)
     const [trackW, setTrackW] = useState(300)
     const knobSize = 52
     const maxDrag = trackW - knobSize - 8
 
+    // Use motion value instead of state — no conflict with framer drag
+    const x = useMotionValue(0)
+    const progress = useTransform(x, [0, maxDrag], [0, 1])
+    const fillWidth = useTransform(x, [0, maxDrag], [knobSize / 2 + 4, trackW])
+    const textColor = useTransform(progress, [0, 0.45, 0.55], ['#8a8a82', '#8a8a82', '#ffffff'])
+
+    /* ── Track width ─────────────────────────────────────────────── */
     useEffect(() => {
         const el = trackRef.current
         if (!el) return
-        const ro = new ResizeObserver(entries => {
-            setTrackW(entries[0].contentRect.width)
-        })
+        const ro = new ResizeObserver(entries => setTrackW(entries[0].contentRect.width))
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
 
-    const progress = maxDrag > 0 ? dragX / maxDrag : 0
-    const textDark = progress > 0.5 || connecting || done
-
+    /* ── Snap back on cancel ─────────────────────────────────────── */
+    const prevConnecting = useRef(connecting)
     useEffect(() => {
-        if (!connecting && !done && dragX > 0 && dragX < maxDrag * 0.88) {
-            const raf = requestAnimationFrame(() => setDragX(0))
-            return () => cancelAnimationFrame(raf)
+        const wasConnecting = prevConnecting.current
+        prevConnecting.current = connecting
+        if (wasConnecting && !connecting && !done) {
+            animate(x, 0, { type: 'spring', stiffness: 340, damping: 30 })
         }
-    }, [connecting])
+    }, [connecting, done, x])
+
+    /* ── Snap back on mount / maxDrag change ─────────────────────── */
+    useEffect(() => {
+        if (!done && !connecting) {
+            animate(x, 0, { type: 'spring', stiffness: 340, damping: 30 })
+        }
+    }, [maxDrag])
+
+    const snapBack = () => animate(x, 0, { type: 'spring', stiffness: 340, damping: 30 })
+    const snapForward = () => animate(x, maxDrag, { type: 'spring', stiffness: 340, damping: 30 })
+    // At the top of the component, with the other motion values
+    const knobRotate = useTransform(x, [0, maxDrag], [0, 80]);
+
+    const handleDragEnd = () => {
+        if (connecting) return
+        const currentX = x.get()
+        if (currentX >= maxDrag * 0.88) {
+            snapForward()
+            onTriggered()
+        } else {
+            snapBack()
+        }
+    }
 
     return (
         <div
@@ -80,17 +81,15 @@ function SlideToConnect({
                 position: 'relative',
                 height: knobSize + 8,
                 borderRadius: 999,
-                background: '#f7f7f4',
+                background: '#f0efea',
                 border: '1px solid #e4e4df',
                 overflow: 'hidden',
                 userSelect: 'none',
                 cursor: connecting ? 'wait' : 'default',
             }}
         >
-            {/* Fill */}
+            {/* ── Fill ─────────────────────────────────────────────── */}
             <motion.div
-                animate={{ width: done ? '100%' : `${4 + dragX + knobSize / 2}px` }}
-                transition={{ type: 'spring', stiffness: 280, damping: 32 }}
                 style={{
                     position: 'absolute',
                     left: 0,
@@ -99,11 +98,12 @@ function SlideToConnect({
                     borderRadius: 999,
                     background: '#242b35',
                     zIndex: 1,
+                    width: done ? '100%' : fillWidth,
                 }}
             />
 
-            {/* Shimmer on fill */}
-            {(connecting || dragX > 0) && (
+            {/* ── Shimmer ───────────────────────────────────────────── */}
+            {(connecting || done) && (
                 <motion.div
                     animate={{ x: ['-100%', '200%'] }}
                     transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
@@ -112,15 +112,15 @@ function SlideToConnect({
                         top: 0,
                         bottom: 0,
                         width: '40%',
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.10), transparent)',
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.13), transparent)',
                         zIndex: 2,
                         pointerEvents: 'none',
                     }}
                 />
             )}
 
-            {/* Label */}
-            <div
+            {/* ── Label ────────────────────────────────────────────── */}
+            <motion.div
                 style={{
                     position: 'absolute',
                     inset: 0,
@@ -133,14 +133,13 @@ function SlideToConnect({
                     fontSize: 14,
                     fontWeight: 500,
                     letterSpacing: '-0.01em',
-                    transition: 'color 0.2s ease',
-                    color: textDark ? '#ffffff' : '#8a8a82',
+                    color: (connecting || done) ? '#ffffff' : textColor,
                 }}
             >
                 {done ? 'Connected ✓' : connecting ? 'Connecting…' : 'Slide to connect →'}
-            </div>
+            </motion.div>
 
-            {/* Knob */}
+            {/* ── Knob ─────────────────────────────────────────────── */}
             {!done && (
                 <motion.div
                     drag="x"
@@ -148,42 +147,36 @@ function SlideToConnect({
                     dragElastic={0}
                     dragMomentum={false}
                     onDrag={(_, info) => {
-                        if (!connecting) {
-                            setDragX(Math.max(0, Math.min(info.offset.x, maxDrag)))
-                        }
+                        if (connecting) return
+                        // clamp manually — dragConstraints alone can drift
+                        x.set(Math.max(0, Math.min(info.point.x - (trackRef.current?.getBoundingClientRect().left ?? 0) - knobSize / 2 - 4, maxDrag)))
                     }}
-                    onDragEnd={() => {
-                        if (dragX >= maxDrag * 0.88) {
-                            setDragX(maxDrag)
-                            onTriggered()
-                        } else {
-                            setDragX(0)
-                        }
-                    }}
-                    animate={{ x: dragX }}
-                    transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+                    onDragEnd={handleDragEnd}
                     style={{
+                        x, // bind motion value directly — no animate conflict
                         position: 'absolute',
                         top: 4,
                         left: 4,
                         width: knobSize,
                         height: knobSize,
                         borderRadius: '50%',
-                        background: '#ffffffs',
+                        background: '#242b35',
                         zIndex: 4,
                         cursor: connecting ? 'wait' : 'grab',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(36,43,53,0.18)',
+                        boxShadow: '0 4px 12px rgba(36,43,53,0.22)',
                     }}
-                    whileTap={{ scale: 0.93 }}
+                    whileTap={connecting ? {} : { scale: 0.93 }}
                 >
                     <motion.div
-                        animate={{ rotate: connecting ? 360 : dragX * 0.8 }}
-                        transition={connecting
-                            ? { duration: 0.8, repeat: Infinity, ease: 'linear' }
-                            : { type: 'spring', stiffness: 200 }
+                        animate={{ rotate: connecting ? 360 : 0 }}
+                        style={{ rotate: connecting ? undefined : knobRotate }}
+                        transition={
+                            connecting
+                                ? { duration: 0.8, repeat: Infinity, ease: 'linear' }
+                                : { type: 'spring', stiffness: 200 }
                         }
                     >
                         <ArrowRight size={18} color="#ffffff" strokeWidth={2.5} />
@@ -216,7 +209,7 @@ export default function ConnectPage() {
             setWallet(address)
             setDone(true)
             toast.success(`Connected ${address.slice(0, 4)}…${address.slice(-4)}`)
-            setTimeout(() => router.push(willAccount ? '/dashboard' : '/setup'), 800)
+            setTimeout(() => router.push('/dashboard'), 400)
         },
         onError: () => {
             setConnecting(false)
@@ -315,7 +308,8 @@ export default function ConnectPage() {
                     >
                         {/* Logo row */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 40 }}>
-                            <SolWillLogo size={38} />
+
+                            <img src="/solwillicon.jpeg" className='w-18 h-16' alt="" />
                             <span style={{
                                 color: '#1a1a18',
                                 fontWeight: 800,
@@ -413,17 +407,11 @@ export default function ConnectPage() {
                                     justifyContent: 'center',
                                     flexShrink: 0,
                                 }}>
-                                    <svg width="18" height="18" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M64 8C33.07 8 8 33.07 8 64s25.07 56 56 56 56-25.07 56-56S94.93 8 64 8Z" fill="white" fillOpacity="0.1" />
-                                        <path d="M106.5 57.5C106.5 36.79 89.71 20 69 20H59C38.29 20 21.5 36.79 21.5 57.5c0 13.47 7.17 25.26 17.86 31.83v8.17a5 5 0 0 0 5 5h4.64a5 5 0 0 0 4.47-2.76l2.24-4.49a29.9 29.9 0 0 0 8.29 1.18c2.85 0 5.6-.4 8.2-1.14l2.23 4.45a5 5 0 0 0 4.47 2.76h4.64a5 5 0 0 0 5-5v-8.12C99.3 82.83 106.5 71 106.5 57.5Z" fill="white" />
-                                        <circle cx="52" cy="55" r="6" fill="rgba(255,255,255,0.5)" />
-                                        <circle cx="76" cy="55" r="6" fill="rgba(255,255,255,0.5)" />
-                                    </svg>
+                                    <img src="/phantom.png" alt="Phantom" style={{ width: 18, height: 18 }} />
                                 </div>
                                 <div>
                                     <div style={{
                                         color: '#1a1a18',
-                                        fontWeight: 600,
                                         fontSize: 14,
                                         letterSpacing: '-0.02em',
                                         fontFamily: '"DM Sans", sans-serif',

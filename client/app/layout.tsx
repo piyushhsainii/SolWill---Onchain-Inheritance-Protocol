@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Instrument_Serif, Roboto_Flex } from "next/font/goog
 import "./globals.css";
 import PrivvyProviderWrapper from "@/lib/providers/privyProvider";
 import SolanaProviderWrapper from "@/lib/providers/solana-adapter-provider";
+import { Toaster } from "react-hot-toast";
 
 
 const geistMono = Roboto_Flex({
@@ -45,6 +46,7 @@ export default function RootLayout({
         <PrivvyProviderWrapper>
           <SolanaProviderWrapper>
             {children}
+            <Toaster />
           </SolanaProviderWrapper>
         </PrivvyProviderWrapper>
       </body>

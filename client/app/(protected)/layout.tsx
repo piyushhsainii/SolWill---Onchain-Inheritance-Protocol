@@ -1,14 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { usePrivy } from '@privy-io/react-auth'
 import { useWillStore } from '@/app/store/useWillStore'
 import { useAnchorProvider, type UseAnchorProviderReturn } from '@/lib/hooks/useAnchorProvider'
+import { useSollWillWallet } from '@/lib/hooks/useSolWillWallet'
 import Sidebar from '@/components/ui/sidebar'
 import FullScreenSpinner from '@/components/ui/full-screen-spinner'
+import { useWallets } from '@privy-io/react-auth/solana'
 
-/* ─── Refresh context — lets any child page call refresh() after a tx ─── */
 const AnchorCtx = createContext<Pick<UseAnchorProviderReturn, 'refresh' | 'program' | 'pdas'>>({
     refresh: async () => { },
     program: null,
@@ -17,7 +18,6 @@ const AnchorCtx = createContext<Pick<UseAnchorProviderReturn, 'refresh' | 'progr
 
 export const useAnchor = () => useContext(AnchorCtx)
 
-/* ─── Root layout guard ──────────────────────────────────────────────── */
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter()
     const { ready, authenticated } = usePrivy()
@@ -26,37 +26,56 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         if (ready && !authenticated) router.replace('/connect')
     }, [ready, authenticated, router])
 
-    if (!ready) return <FullScreenSpinner label="Initialising…" />
+    if (!ready) return <FullScreenSpinner label="Initialising" />
     if (!authenticated) return null
 
-    // Only mount HydratedLayout once Privy confirms auth so
-    // useAnchorProvider sees a populated wallets[] array on first render
     return <HydratedLayout>{children}</HydratedLayout>
 }
 
-/* ─── Inner layout — runs after auth confirmed ───────────────────────── */
-function HydratedLayout({ children }: { children: React.ReactNode }) {
-    const { loading, error, program, pdas, refresh, } = useAnchorProvider()
+// How many renders to wait before giving up on wallet population.
+// Wallet typically populates within 1–2 renders, 5 is a safe ceiling.
+const WALLET_SETTLE_RENDERS = 5
 
-    // Both slices start as null in the store (no seed data).
-    // firstLoad = true only on the very first fetch before chain data arrives.
+function HydratedLayout({ children }: { children: React.ReactNode }) {
+    const { loading, error, program, pdas, refresh } = useAnchorProvider()
+    const { authenticated, user } = usePrivy()
+    const { wallets } = useWallets()
+    const wallet = wallets[0];
     const willAccount = useWillStore(s => s.willAccount)
     const vaultAccount = useWillStore(s => s.vaultAccount)
-    const connected = useWillStore(s => s.connected)
+    const { setConnected } = useWillStore()
 
-    // We are in first-load state when:
-    //   - a fetch is in flight AND
-    //   - neither slice has been populated yet
+    // Track how many renders have passed while wallet isn't connected yet.
+    // This lets us stop waiting once the wallet has had enough time to settle.
+    const [renderCount, setRenderCount] = useState(0)
+
+    useEffect(() => {
+        if (!authenticated || !user?.wallet?.address) {
+            setRenderCount(prev => prev + 1)
+        }
+    }) // intentionally no deps — runs every render
+
+    const walletSettled =
+        (authenticated && !!user?.wallet?.address) ||  // wallet is ready
+        renderCount >= WALLET_SETTLE_RENDERS          // or we've waited long enough
+
     const firstLoad = loading && willAccount === null && vaultAccount === null
 
-    if (firstLoad) return <FullScreenSpinner label="Loading your will…" />
+    // Wait for wallet to settle across renders before showing any spinner or content.
+    // Without this, wallet.connected is false on render 1 even if it's about to be true.
+    if (!walletSettled) {
+        return <FullScreenSpinner label="Connecting wallet…" />
+    }
 
-    // connected is set synchronously by useAnchorProvider as soon as the
-    // wallet address is known — before the async chain fetch completes.
-    // If it's still false here something is wrong with Privy wallet resolution.
-    // console.log(first)
-    console.log(connected)
-    if (!connected) return <FullScreenSpinner label="Connecting wallet…" />
+    // After settling, if still not connected, the wallet is genuinely absent
+    if (!authenticated || !user?.wallet?.address) {
+        // You could redirect to /connect here, or show an error state
+        return <FullScreenSpinner label="No wallet found — reconnecting…" />
+    }
+    useEffect(() => {
+        if (authenticated) setConnected(true)
+    }, [authenticated])
+    if (firstLoad) return <FullScreenSpinner label="Loading your will…" />
 
     return (
         <AnchorCtx.Provider value={{ refresh, program, pdas }}>
@@ -73,7 +92,6 @@ function HydratedLayout({ children }: { children: React.ReactNode }) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    fontFamily: '"DM Sans", sans-serif',
                 }}>
                     <span>⚠</span>
                     Could not sync with the network — showing cached data.
@@ -94,5 +112,3 @@ function HydratedLayout({ children }: { children: React.ReactNode }) {
         </AnchorCtx.Provider>
     )
 }
-
-

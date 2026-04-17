@@ -14,6 +14,8 @@ import DesignatedHeirs from '@/components/Dashboard/designated_heirs'
 import { Heir } from '@/lib/utils/helper'
 import { OnboardingProgress } from '@/components/Dashboard/onboarding-progress'
 import { OnboardingNavButtons } from '@/components/Dashboard/nav-buttons'
+import { useCreateWill } from '@/lib/hooks/useCreateWill'
+import { useWallets } from '@privy-io/react-auth/solana'
 
 /* ─── Animation Variants ─────────────────────────────────────────────── */
 const stagger = {
@@ -43,7 +45,6 @@ function PulsingDot({ color = '#4ade80' }: { color?: string }) {
 /* ─── Main Dashboard Page ────────────────────────────────────────────── */
 export default function DashboardPage() {
     const router = useRouter()
-
     const {
         connected,
         willAccount,
@@ -52,12 +53,10 @@ export default function DashboardPage() {
         setTxPending,
         txPending,
         performCheckin,
-        createWill,
         addHeir,
         removeHeir,
         updateHeir
     } = useWillStore()
-
 
 
     const [simWill, setSimWill] = useState<any>(willAccount ?? null)
@@ -81,6 +80,7 @@ export default function DashboardPage() {
     }
 
     const [phase, setPhase] = useState<Phase>(getAutoPhase())
+    const { createWill } = useCreateWill()
 
     const completedSteps = [
         !!activeWill,
@@ -96,16 +96,19 @@ export default function DashboardPage() {
     const hasAssets = !!(vaultAccount && vaultAccount.totalUsdValue > 0)
     const avatarColors = ['var(--accent)', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
 
-    // ── Handlers ────────────────────────────────────────────────────────
     const handleCreateWill = async (days: number) => {
-        setLoadingStep(true)
+        try {
+            setLoadingStep(true)
+            console.log('hello')
+            const success = await createWill(days)
 
-        await mockTx('Will contract deployed', () => {
-            createWill(days)
-        })
+            if (!success) return
 
-        setLoadingStep(false)
-        goNext()
+            setStepDir('forward')
+            setPhase(1)
+        } finally {
+            setLoadingStep(false)
+        }
     }
 
     const handleAddHeir = (address: string, share: number) => {
@@ -166,8 +169,9 @@ export default function DashboardPage() {
             return prev
         })
     }
+
     console.log(`phase value`, phase)
-    if (!connected) return null
+    // if (!connected) return null
 
     useEffect(() => {
         setPhase(getAutoPhase())
@@ -243,7 +247,7 @@ export default function DashboardPage() {
                                         completedSteps={completedSteps}
                                     />
                                     {
-                                        phase !== 'dashboard' &&
+                                        phase as Phase !== 'dashboard' &&
                                         <OnboardingNavButtons goBack={goBack} goNext={goNext} phase={phase} />
                                     }
 

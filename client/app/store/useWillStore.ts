@@ -61,7 +61,7 @@ type State = {
   addHeir: (heir: Omit<Heir, "id">) => void;
   updateHeir: (id: string, updates: Partial<Omit<Heir, "id">>) => void;
   removeHeir: (id: string) => void;
-
+  setConnected: (v: boolean) => void;
   depositAsset: (asset: {
     symbol: string;
     amount: number;
@@ -110,7 +110,7 @@ export const useWillStore = create<State>((set, get) => ({
     set({ publicKey: key, walletAddress: key, connected: !!key }),
 
   setTxPending: (v) => set({ txPending: v }),
-
+  setConnected: (v: boolean) => set({ connected: v }),
   // ── Will ─────────────────────────────────────────────────────────────────
   createWill: (intervalDays) =>
     set(() => {

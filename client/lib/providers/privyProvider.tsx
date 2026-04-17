@@ -31,12 +31,12 @@ export default function PrivvyProviderWrapper({
                 },
                 solana: {
                     rpcs: {
-                        // "solana:mainnet": {
-                        //     rpc: createSolanaRpc("https://api.devnet.solana.com"),
-                        //     rpcSubscriptions: createSolanaRpcSubscriptions(
-                        //         "wss://api.devnet.solana.com"
-                        //     ),
-                        // },
+                        "solana:mainnet": {
+                            rpc: createSolanaRpc("https://api.devnet.solana.com"),
+                            rpcSubscriptions: createSolanaRpcSubscriptions(
+                                "wss://api.devnet.solana.com"
+                            ),
+                        },
                         "solana:devnet": {
                             rpc: createSolanaRpc("https://api.devnet.solana.com"),
                             rpcSubscriptions: createSolanaRpcSubscriptions(
@@ -59,7 +59,7 @@ export default function PrivvyProviderWrapper({
                         createOnLogin: "off",
                     },
                     solana: {
-                        createOnLogin: "all-users",
+                        createOnLogin: "off",
                     },
                 },
             }}
