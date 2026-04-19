@@ -113,7 +113,7 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                 })))
                 willPdaRef.current = willPda
                 vaultPdaRef.current = vaultPda
-
+                console.log(`xxxx`, vaultPda.toBase58())
                 setProgram(prog)
             } catch (e) {
                 console.error('[useAnchorProvider] init error:', e)
@@ -126,7 +126,24 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
 
         init()
     }, [wallet.ready, wallet.address])
-    /* ── 2. Fetch on-chain state ─────────────────────────────────── */
+
+    async function fetchUsdPrices(mints: string[]): Promise<Record<string, number>> {
+        // SOL mint address for Jupiter
+        const SOL_MINT = 'So11111111111111111111111111111111111111112'
+        const allMints = [SOL_MINT, ...mints].join(',')
+        try {
+            const res = await fetch(`https://api.jup.ag/price/v2?ids=${allMints}`)
+            const json = await res.json()
+            const prices: Record<string, number> = {}
+            for (const [mint, data] of Object.entries(json.data as Record<string, any>)) {
+                prices[mint] = parseFloat(data?.price ?? '0')
+            }
+            return prices
+        } catch {
+            return {}
+        }
+    }
+
     const refresh = useCallback(async () => {
         if (!wallet.ready || !program || !wallet.publicKey || !willPdaRef.current || !vaultPdaRef.current) return
 
@@ -159,10 +176,16 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
 
             let solBalance = 0
             try {
-                const vaultData = await (program.account as any).vault.fetch(vaultPda) as VaultData
-                solBalance = (vaultData.solBalance as BN).toNumber() / LAMPORTS_PER_SOL
+                const vaultData = await program.account.vault.fetch(vaultPda);
+                const vaultbalance = await conn.getBalance(vaultPda);
+                console.log('raw sol balance', vaultbalance.toFixed())
+                console.log(vaultData.solBalance.toNumber())
+                solBalance = vaultbalance / LAMPORTS_PER_SOL
             } catch { }
 
+            const SOL_MINT = 'So11111111111111111111111111111111111111112'
+
+            // collect spl mints
             const splAssets: Asset[] = []
             if (willData && Array.isArray((willData as any).assets)) {
                 const rawAssets = (willData as any).assets as Array<{ mint: PublicKey; balance: BN }>
@@ -176,20 +199,41 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                         symbol: meta?.symbol ?? mintStr.slice(0, 6),
                         mint: mintStr,
                         amount,
-                        usdPrice: 0,
-                        usdValue: 0,
+                        usdPrice: 0,   // filled below
+                        usdValue: 0,   // filled below
                         icon: meta?.icon,
                     })
                 }))
             }
 
-            const solAsset: Asset = { symbol: 'SOL', amount: solBalance, usdPrice: 0, usdValue: 0 }
-            const allAssets = [solAsset, ...splAssets].filter(a => a.amount > 0)
+            // ✅ Fetch all prices in one call
+            const splMints = splAssets.map(a => a.mint!)
+            const prices = await fetchUsdPrices(splMints)
+
+            const solPrice = prices[SOL_MINT] ?? 0
+            const solUsdValue = solBalance * solPrice
+
+            const solAsset: Asset = {
+                symbol: 'SOL',
+                amount: solBalance,
+                usdPrice: solPrice,
+                usdValue: solUsdValue,
+            }
+
+            // Hydrate spl prices
+            const hydratedSpl = splAssets.map(a => ({
+                ...a,
+                usdPrice: prices[a.mint!] ?? 0,
+                usdValue: (prices[a.mint!] ?? 0) * a.amount,
+            }))
+
+            const allAssets = [solAsset, ...hydratedSpl].filter(a => a.amount > 0)
+            const totalUsdValue = allAssets.reduce((sum, a) => sum + a.usdValue, 0)  // ✅ now accumulates
 
             storeActions().setVaultAccount({
                 sol: solBalance,
-                usdc: splAssets.find(a => a.symbol === 'USDC')?.amount ?? 0,
-                totalUsdValue: 0,
+                usdc: hydratedSpl.find(a => a.symbol === 'USDC')?.amount ?? 0,
+                totalUsdValue,   // ✅ real value now
                 assets: allAssets,
             })
 
@@ -209,22 +253,22 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
             setLoading(false)
         }
     }, [wallet.ready, wallet.publicKey, program])
-    const hasInitialFetched = useRef(false)
+    const hasRefreshedRef = useRef(false)
 
-    /* ── 3. Auto-refresh once — only on first ready ──────────── */
     useEffect(() => {
         if (
             wallet.ready &&
-            wallet.address &&
+            wallet.connected &&
             program &&
+            wallet.address &&
             willPdaRef.current &&
             vaultPdaRef.current &&
-            !hasInitialFetched.current  // ← gate: only run once
+            !hasRefreshedRef.current  // ← only refresh once on mount
         ) {
-            hasInitialFetched.current = true
+            hasRefreshedRef.current = true
             refresh()
         }
-    }, [wallet.ready, wallet.address, program])
+    }, [wallet.ready, wallet.connected, wallet.address, program])
 
     return { loading, error, refresh, program, pdas: { willPda: willPdaRef.current, vaultPda: vaultPdaRef.current }, Heirs }
 }

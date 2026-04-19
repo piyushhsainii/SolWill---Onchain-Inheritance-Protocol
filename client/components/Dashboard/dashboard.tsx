@@ -27,14 +27,9 @@ const Dashboard = ({
 }) => {
 
     const {
-        connected,
-        willAccount,
-        heirs: storeHeirs,
         setTxPending,
         txPending,
         performCheckin,
-        removeHeir,
-        updateHeir
     } = useWillStore()
 
     const [checkinAnim, setCheckinAnim] = useState(false)
@@ -52,7 +47,7 @@ const Dashboard = ({
     const intervalDays = activeWill ? Math.floor(activeWill.interval / 86400) : 30
     const progressPct = intervalDays > 0 ? (daysLeft / intervalDays) * 100 : 0
     const isUrgent = daysLeft < 7
-    const hasAssets = !!(vaultAccount && vaultAccount.totalUsdValue > 0)
+    const hasAssets = !!(vaultAccount && (vaultAccount.totalUsdValue > 0 || vaultAccount.sol > 0))
     const avatarColors = ['var(--accent)', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
 
     return (

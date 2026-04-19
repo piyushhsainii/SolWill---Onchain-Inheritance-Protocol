@@ -1,9 +1,7 @@
 'use client'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useWillStore, WillAccount } from '../../store/useWillStore'
-import { mockTx } from '@/lib/utils'
 import CreateWillStep from "@/components/Dashboard/createWillStep"
 import DepositFundsStep from '@/components/Dashboard/depositFundsStep'
 import AddHeirsStep from '@/components/Dashboard/addHeirStep'
@@ -27,13 +25,8 @@ export default function DashboardPage() {
         willAccount,
         vaultAccount,
         heirs: storeHeirs,
-        setTxPending,
-        performCheckin,
-        removeHeir,
-        updateHeir
     } = useWillStore()
     const {
-        pdas,
         loading,
         refresh
     } = useAnchorProvider()
@@ -46,14 +39,13 @@ export default function DashboardPage() {
 
     const activeWill = simWill ?? willAccount
     const activeHeirs: Heir[] = simHeirs.length > 0 ? simHeirs : (storeHeirs ?? [])
-    console.log('active heir shares', activeHeirs)
     const totalHeirShare = activeHeirs.reduce((s: number, h: Heir) => s + h.shareBps, 0)
 
     // ── Determine current phase ─────────────────────────────────────────
 
     const getAutoPhase = (): Phase => {
-        if (!activeWill) return 0                                          // no will → must create
-        if (activeHeirs.length === 0 || totalHeirShare !== 100) return 1 // no heirs → must add  (note: shareBps is basis points so 100% = 10000)
+        if (!activeWill) return 0
+        if (activeHeirs.length === 0 || totalHeirShare !== 10000) return 'dashboard' // no heirs → must add  (note: shareBps is basis points so 100% = 10000)
         if (!vaultAccount || vaultAccount.totalUsdValue <= 0) return 2     // no funds → can skip
         return 'dashboard'
     }
@@ -116,7 +108,7 @@ export default function DashboardPage() {
             await new Promise(res => setTimeout(res, 1500))
         }
 
-        // await refresh()
+        await refresh()
         setStepDir('forward')
         setPhase(2)
     }
@@ -167,6 +159,7 @@ export default function DashboardPage() {
         })
     }
     // if (!connected) return null
+    console.log('vault', vaultAccount)
 
     useEffect(() => {
         if (loading) return
@@ -176,7 +169,6 @@ export default function DashboardPage() {
         }
         setPhase(getAutoPhase())
     }, [loading, activeWill, activeHeirs.length, totalHeirShare, vaultAccount?.totalUsdValue])
-
     return (
         <>
             <style>{`

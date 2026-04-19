@@ -101,19 +101,19 @@ const AssetsComponent = ({
                             {[
                                 {
                                     bg: 'linear-gradient(135deg,#9945FF,#7c3aed)',
-                                    symbol: '◎',
+                                    symbol: '/sol-logo.png',
                                     name: 'Solana',
                                     sub: `${vaultAccount?.sol} SOL`,
-                                    value: '$162,520.45',
+                                    value: `${vaultAccount?.sol}`,
                                     change: '+2.4%',
                                     up: true,
                                 },
                                 {
                                     bg: 'linear-gradient(135deg,#2775CA,#1d4ed8)',
-                                    symbol: '$',
+                                    symbol: 'usdc-logo.png',
                                     name: 'USD Coin',
                                     sub: `${vaultAccount?.usdc} USDC`,
-                                    value: '$25,000.00',
+                                    value: `${vaultAccount?.usdc}`,
                                     change: 'Stable',
                                     up: null,
                                 },
@@ -164,7 +164,7 @@ const AssetsComponent = ({
                                                     '0 6px 16px rgba(36,43,53,0.12)',
                                             }}
                                         >
-                                            {asset.symbol}
+                                            <img src={asset.symbol} />
                                         </div>
 
                                         <div>

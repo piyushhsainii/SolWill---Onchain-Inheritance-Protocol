@@ -9,10 +9,11 @@ import Sidebar from '@/components/ui/sidebar'
 import FullScreenSpinner from '@/components/ui/full-screen-spinner'
 import { UseAnchorProviderReturn } from '@/lib/utils/helper'
 
-const AnchorCtx = createContext<Pick<UseAnchorProviderReturn, 'refresh' | 'program' | 'pdas'>>({
+const AnchorCtx = createContext<Pick<UseAnchorProviderReturn, 'refresh' | 'program' | 'pdas' | 'loading'>>({
     refresh: async () => { },
     program: null,
     pdas: { willPda: null, vaultPda: null },
+    loading: true,
 })
 
 export const useAnchor = () => useContext(AnchorCtx)
@@ -32,7 +33,8 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 }
 
 function HydratedLayout({ children }: { children: React.ReactNode }) {
-    const { loading, error, program, pdas, refresh, Heirs } = useAnchorProvider()
+    const { error, Heirs } = useAnchorProvider()
+    const { pdas, program, refresh, loading } = useAnchor();
     const { authenticated, user } = usePrivy()
     const willAccount = useWillStore(s => s.willAccount)
     const vaultAccount = useWillStore(s => s.vaultAccount)
@@ -53,7 +55,7 @@ function HydratedLayout({ children }: { children: React.ReactNode }) {
     if (firstLoad) return <FullScreenSpinner label="Loading your will…" />
 
     return (
-        <AnchorCtx.Provider value={{ refresh, program, pdas }}>
+        <AnchorCtx.Provider value={{ refresh, program, pdas, loading }}>
             {error && !loading && (
                 <div style={{
                     position: 'fixed',

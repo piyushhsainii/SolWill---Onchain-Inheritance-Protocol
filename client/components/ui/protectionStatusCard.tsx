@@ -231,10 +231,10 @@ function ProtectionStatusCard({
                     ) : (
                         <>
                             <Image
-                                src="/finger_print.png"
+                                src="/scanner.png"
                                 alt="Fingerprint"
-                                width={42}
-                                height={42}
+                                width={62}
+                                height={62}
                                 style={{
                                     objectFit: 'contain',
                                     opacity: 0.95,
