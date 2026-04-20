@@ -1,6 +1,12 @@
 import { Program } from "@coral-xyz/anchor";
 import { DeadWallet } from "../idl/idl";
-import { PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
+import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 
 export const fadeUp = {
   hidden: { opacity: 0, y: 20, scale: 0.98 },
@@ -34,4 +40,38 @@ export interface UseAnchorProviderReturn {
   program: Program<DeadWallet> | null;
   pdas: { willPda: PublicKey | null; vaultPda: PublicKey | null };
   Heirs: Heir[];
+}
+
+export async function buildAndSend(
+  raw: any,
+  connection: Connection,
+  ix: any,
+  ownerPk: PublicKey,
+): Promise<string> {
+  const { blockhash, lastValidBlockHeight } =
+    await connection.getLatestBlockhash("confirmed");
+
+  // ✅ Build as VersionedTransaction — what Privy expects
+  const message = new TransactionMessage({
+    payerKey: ownerPk,
+    recentBlockhash: blockhash,
+    instructions: [ix],
+  }).compileToV0Message();
+
+  const tx = new VersionedTransaction(message);
+
+  // Privy's signAndSendTransaction with versioned tx
+  const { signature: rawSig } = await raw.signAndSendTransaction({
+    transaction: tx,
+    chain: "solana:devnet",
+  });
+
+  const signature = typeof rawSig === "string" ? rawSig : bs58.encode(rawSig);
+
+  await connection.confirmTransaction(
+    { signature, blockhash, lastValidBlockHeight },
+    "confirmed",
+  );
+
+  return signature;
 }

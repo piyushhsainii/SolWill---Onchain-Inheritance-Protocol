@@ -77,10 +77,6 @@ type State = {
   withdrawAsset: (symbol: string, amount: number) => void;
 };
 
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                     */
-/* -------------------------------------------------------------------------- */
-
 const now = () => Math.floor(Date.now() / 1000);
 
 const calcVaultTotals = (assets: Asset[]): VaultAccount => ({

@@ -5,11 +5,10 @@ import { AnchorProvider, BN, Program, type Idl } from '@coral-xyz/anchor'
 import {
     clusterApiUrl,
     Connection,
-    LAMPORTS_PER_SOL,
     PublicKey,
     Transaction,
 } from '@solana/web3.js'
-import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { getAssociatedTokenAddressSync } from '@solana/spl-token'
 import toast from 'react-hot-toast'
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes'
 
@@ -25,16 +24,42 @@ const VAULT_SEED = Buffer.from('vault')
 const RPC_URL = clusterApiUrl('devnet')
 
 /* ─── shared tx helper ───────────────────────────────────────────── */
-import { VersionedTransaction, TransactionMessage } from '@solana/web3.js'
-import { buildAndSend } from '../utils/helper'
+async function buildAndSend(
+    raw: any,
+    connection: Connection,
+    ix: any,
+    ownerPk: PublicKey
+): Promise<string> {
+    const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash('confirmed')
 
+    const tx = new Transaction({ feePayer: ownerPk, blockhash, lastValidBlockHeight }).add(ix)
 
+    const serializedTx = new Uint8Array(
+        tx.serialize({ requireAllSignatures: false, verifySignatures: false })
+    )
+
+    const result = await raw.signAndSendTransaction({
+        transaction: serializedTx,
+        chain: 'solana:devnet',
+    })
+
+    const signature = bs58.encode(result.signature)
+
+    await connection.confirmTransaction(
+        { signature, blockhash, lastValidBlockHeight },
+        'confirmed'
+    )
+
+    return signature
+}
 
 /* ═══════════════════════════════════════════════════════════════════
-   useDepositSOL
-   amountSol — human-readable SOL (e.g. 0.5), converted to lamports
+   useWithdrawSOL
+   amountLamports — raw lamport amount (u32 per IDL)
+   Note: IDL uses u32 for withdrawSolToken amt, max ~4.29 SOL
    ═══════════════════════════════════════════════════════════════════ */
-export function useDepositSOL() {
+export function useWithdrawSOL() {
     const { raw, ready, loading: walletLoading, connected, publicKey } = useSollWillWallet()
     const { refresh } = useAnchorProvider()
     const setTxPending = useWillStore(s => s.setTxPending)
@@ -42,12 +67,9 @@ export function useDepositSOL() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
-    const depositSOL = useCallback(
+    const withdrawSOL = useCallback(
+        // amountSol — human-readable SOL, e.g. 0.5
         async (amountSol: number): Promise<boolean> => {
-            if (!raw || typeof raw.signAndSendTransaction !== 'function') {
-                toast.error('Wallet disconnected. Please reconnect.')
-                return false
-            }
             try {
                 if (!ready || walletLoading) { toast.error('Wallet still loading...'); return false }
                 if (!connected || !publicKey || !raw) { toast.error('Please connect wallet.'); return false }
@@ -58,7 +80,13 @@ export function useDepositSOL() {
                 const program = new Program<DeadWallet>(IDL as Idl, provider)
 
                 const ownerPk = publicKey
-                const amountLamports = new BN(Math.floor(amountSol * LAMPORTS_PER_SOL))
+
+                // IDL uses u32 for amt — max ~4.29 billion lamports (~4.29 SOL)
+                const amountLamports = Math.floor(amountSol * 1_000_000_000)
+                if (amountLamports > 4_294_967_295) {
+                    toast.error('Amount exceeds u32 max (~4.29 SOL per withdrawal)')
+                    return false
+                }
 
                 const [willPda] = PublicKey.findProgramAddressSync(
                     [WILL_SEED, ownerPk.toBuffer()], PROGRAM_ID
@@ -71,67 +99,32 @@ export function useDepositSOL() {
                 setTxPending(true)
                 setError(null)
 
-                const toastId = toast.loading(`Depositing ${amountSol} SOL...`)
+                console.log('[withdrawSOL] withdrawing', amountSol, 'SOL =', amountLamports, 'lamports')
+                console.log('[withdrawSOL] willPda:', willPda.toBase58())
+                console.log('[withdrawSOL] vaultPda:', vaultPda.toBase58())
 
-                console.log('[depositSOL] depositing', amountSol, 'SOL =', amountLamports.toNumber(), 'lamports')
-                console.log('[depositSOL] willPda:', willPda.toBase58())
-                console.log('[depositSOL] vaultPda:', vaultPda.toBase58())
+                const toastId = toast.loading(`Withdrawing ${amountSol} SOL...`)
 
                 const ix = await program.methods
-                    .depositSol(amountLamports)
+                    .withdrawSolToken(amountLamports)
                     .accounts({
-                        owner: ownerPk,
-                        tokenProgram: TOKEN_PROGRAM_ID,
+                        signer: ownerPk,
+                        willAccount: willPda,
+                        vault: vaultPda,
                     })
                     .instruction()
 
-                console.log('[depositSOL] instruction built:', ix)
+                const sig = await buildAndSend(raw, connection, ix, ownerPk)
+                console.log('[withdrawSOL] confirmed:', sig)
 
-                const { blockhash, lastValidBlockHeight } =
-                    await connection.getLatestBlockhash('confirmed')
-
-                const tx = new Transaction({
-                    feePayer: ownerPk,
-                    blockhash,
-                    lastValidBlockHeight,
-                }).add(ix)
-
-                let serializedTx: Uint8Array
-                try {
-                    serializedTx = new Uint8Array(
-                        tx.serialize({ requireAllSignatures: false, verifySignatures: false })
-                    )
-                    console.log('[depositSOL] serialized tx byteLength:', serializedTx.byteLength)
-                    console.log('[depositSOL] is Uint8Array:', serializedTx instanceof Uint8Array)
-                } catch (serErr) {
-                    console.error('[depositSOL] serialization failed:', serErr)
-                    throw serErr
-                }
-
-                const logs = await connection.simulateTransaction(tx)
-                console.log('[depositSOL] simulation:', logs)
-
-                const result = await raw.signAndSendTransaction({
-                    transaction: serializedTx,
-                    chain: 'solana:devnet',
-                })
-                const signature = bs58.encode(result.signature)
-                console.log('[depositSOL] signature:', signature)
-
-                await connection.confirmTransaction(
-                    { signature, blockhash, lastValidBlockHeight },
-                    'confirmed'
-                )
-
-                console.log('[depositSOL] confirmed!')
-                toast.success(`${amountSol} SOL deposited!`, { id: toastId })
+                toast.success(`${amountSol} SOL withdrawn!`, { id: toastId })
                 await refresh()
                 return true
             } catch (err) {
                 const e = err instanceof Error ? err : new Error(String(err))
-                console.error('[depositSOL] error:', e)
+                console.error('[withdrawSOL] error:', e)
                 setError(e)
-                toast.error(parseDepositError(e))
+                toast.error(parseWithdrawError(e))
                 return false
             } finally {
                 setLoading(false)
@@ -141,16 +134,16 @@ export function useDepositSOL() {
         [raw, ready, walletLoading, connected, publicKey, refresh, setTxPending]
     )
 
-    return { depositSOL, loading, error }
+    return { withdrawSOL, loading, error }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   useDepositSPL
-   mint        — token mint PublicKey
-   amountRaw   — amount in token's smallest unit (e.g. for USDC with
-                 6 decimals: 1 USDC = 1_000_000)
+   useWithdrawSPL
+   mint      — token mint PublicKey
+   amountRaw — raw token units (u32 per IDL)
+               e.g. for USDC (6 decimals): 1 USDC = 1_000_000
    ═══════════════════════════════════════════════════════════════════ */
-export function useDepositSPL() {
+export function useWithdrawSPL() {
     const { raw, ready, loading: walletLoading, connected, publicKey } = useSollWillWallet()
     const { refresh } = useAnchorProvider()
     const setTxPending = useWillStore(s => s.setTxPending)
@@ -158,19 +151,22 @@ export function useDepositSPL() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
-    const depositSPL = useCallback(
+    const withdrawSPL = useCallback(
         async (mint: PublicKey, amountRaw: number): Promise<boolean> => {
             try {
                 if (!ready || walletLoading) { toast.error('Wallet still loading...'); return false }
                 if (!connected || !publicKey || !raw) { toast.error('Please connect wallet.'); return false }
                 if (amountRaw <= 0) { toast.error('Amount must be greater than 0'); return false }
+                if (amountRaw > 4_294_967_295) {
+                    toast.error('Amount exceeds u32 max')
+                    return false
+                }
 
                 const connection = new Connection(RPC_URL, 'confirmed')
                 const provider = new AnchorProvider(connection, raw, { commitment: 'confirmed' })
                 const program = new Program<DeadWallet>(IDL as Idl, provider)
 
                 const ownerPk = publicKey
-                const amount = new BN(amountRaw)
 
                 const [willPda] = PublicKey.findProgramAddressSync(
                     [WILL_SEED, ownerPk.toBuffer()], PROGRAM_ID
@@ -179,38 +175,48 @@ export function useDepositSPL() {
                     [VAULT_SEED, willPda.toBuffer()], PROGRAM_ID
                 )
 
+                // Derive ATAs
+                // ownerAta: token account for owner
+                const ownerAta = getAssociatedTokenAddressSync(mint, ownerPk)
+                // vaultAta: token account owned by vault PDA (allowOwnerOffCurve = true)
+                const vaultAta = getAssociatedTokenAddressSync(mint, vaultPda, true)
+
                 setLoading(true)
                 setTxPending(true)
                 setError(null)
 
-                console.log('[depositSPL] mint:', mint.toBase58())
-                console.log('[depositSPL] amount (raw):', amountRaw)
-                console.log('[depositSPL] willPda:', willPda.toBase58())
-                console.log('[depositSPL] vaultPda:', vaultPda.toBase58())
+                console.log('[withdrawSPL] mint:', mint.toBase58())
+                console.log('[withdrawSPL] amount (raw):', amountRaw)
+                console.log('[withdrawSPL] willPda:', willPda.toBase58())
+                console.log('[withdrawSPL] vaultPda:', vaultPda.toBase58())
+                console.log('[withdrawSPL] ownerAta:', ownerAta.toBase58())
+                console.log('[withdrawSPL] vaultAta:', vaultAta.toBase58())
 
-                const toastId = toast.loading('Depositing token...')
+                const toastId = toast.loading('Withdrawing token...')
 
-                // Anchor resolves ownerAta and vaultAta automatically from the IDL seeds
                 const ix = await program.methods
-                    .depositSplTokens(amount)
+                    .withdrawSplToken(amountRaw)
                     .accounts({
-                        owner: ownerPk,
-                        mint: mint,
-                        tokenProgram: TOKEN_PROGRAM_ID
+                        signer: ownerPk,
+                        willAccount: willPda,
+                        ownerAta: ownerAta,
+                        vault: vaultPda,
+                        vaultMint: mint,
+                        vaultAta: vaultAta,
                     })
                     .instruction()
 
                 const sig = await buildAndSend(raw, connection, ix, ownerPk)
-                console.log('[depositSPL] confirmed:', sig)
+                console.log('[withdrawSPL] confirmed:', sig)
 
-                toast.success('Token deposited!', { id: toastId })
+                toast.success('Token withdrawn!', { id: toastId })
                 await refresh()
                 return true
             } catch (err) {
                 const e = err instanceof Error ? err : new Error(String(err))
-                console.error('[depositSPL] error:', e)
+                console.error('[withdrawSPL] error:', e)
                 setError(e)
-                toast.error(parseDepositError(e))
+                toast.error(parseWithdrawError(e))
                 return false
             } finally {
                 setLoading(false)
@@ -220,17 +226,19 @@ export function useDepositSPL() {
         [raw, ready, walletLoading, connected, publicKey, refresh, setTxPending]
     )
 
-    return { depositSPL, loading, error }
+    return { withdrawSPL, loading, error }
 }
 
 /* ─── error parser ───────────────────────────────────────────────── */
-function parseDepositError(err: Error): string {
+function parseWithdrawError(err: Error): string {
     const msg = err.message || ''
     if (msg.includes('User rejected')) return 'Transaction cancelled.'
     if (msg.includes('insufficient funds')) return 'Not enough SOL for fees.'
-    if (msg.includes('0x1775')) return 'Insufficient token balance.'       // custom 6005
-    if (msg.includes('0x1774')) return 'You are not the will owner.'       // custom 6004
-    if (msg.includes('0x177a')) return 'Max 5 assets allowed per will.'   // custom 6010
+    if (msg.includes('0x1770') || msg.includes('lowBalance')) return 'Insufficient vault balance.'
+    if (msg.includes('0x1771') || msg.includes('unauthorisedDepositor')) return 'You are not the vault owner.'
+    if (msg.includes('0x1775') || msg.includes('ownerNotValid')) return 'Owner mismatch.'
+    if (msg.includes('0x177d') || msg.includes('vaultAtaInvalid')) return 'Vault token account does not exist.'
+    if (msg.includes('0x177e') || msg.includes('mintAccountNotValid')) return 'Token mint not registered in will.'
     if (msg.includes('already in use')) return 'Account already exists.'
     return msg
 }
