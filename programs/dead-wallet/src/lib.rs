@@ -45,7 +45,7 @@ pub use withdraw_spl::*;
 pub use error::*;
 
 
-declare_id!("uJ5ujCBYYNJ7V4Fpurewj9cDSPT3jHnEKLnaxYPYss9");
+declare_id!("9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf");
 
 #[program]
 pub mod dead_wallet {

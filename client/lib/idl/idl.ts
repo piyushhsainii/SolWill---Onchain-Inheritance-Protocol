@@ -1,5 +1,5 @@
 export type DeadWallet = {
-  address: "uJ5ujCBYYNJ7V4Fpurewj9cDSPT3jHnEKLnaxYPYss9";
+  address: "9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf";
   metadata: {
     name: "deadWallet";
     version: "0.1.0";

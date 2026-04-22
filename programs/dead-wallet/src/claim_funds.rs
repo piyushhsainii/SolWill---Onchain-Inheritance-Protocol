@@ -1,5 +1,5 @@
-use anchor_lang::{prelude::*, system_program::{self, transfer}};
-use anchor_spl::{ associated_token::{self, AssociatedToken}, token::{Transfer, TransferChecked, transfer_checked}, token_interface::{Mint, TokenAccount, TokenInterface}};
+use anchor_lang::{prelude::*, system_program::{self}};
+use anchor_spl::{ associated_token::{self, AssociatedToken}, token_interface::{Mint, TokenAccount, TokenInterface, TransferChecked, transfer_checked }};
 
 use crate::{error::Errors, states::{Heir, HeirStatus, Vault, WillAccount}};
 

@@ -1,6 +1,6 @@
 
 use anchor_lang::{Result, prelude::*};
-use anchor_spl::{  token::{CloseAccount, TransferChecked, close_account, transfer_checked, }, token_interface::{Mint, TokenAccount, TokenInterface}};
+use anchor_spl::{  token::{CloseAccount, close_account }, token_interface::{Mint, TokenAccount, TokenInterface, TransferChecked, transfer_checked}};
 use crate::{error::Errors, states::{SPLTOKENS, Vault, WillAccount}};
 
 

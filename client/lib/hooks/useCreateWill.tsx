@@ -23,7 +23,7 @@ import { useSollWillWallet } from './useSolWillWallet'
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes'
 
 const PROGRAM_ID = new PublicKey(
-    'uJ5ujCBYYNJ7V4Fpurewj9cDSPT3jHnEKLnaxYPYss9'
+    '9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf'
 )
 
 const WILL_SEED = Buffer.from('will')

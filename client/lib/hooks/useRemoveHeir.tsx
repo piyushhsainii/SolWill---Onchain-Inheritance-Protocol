@@ -11,7 +11,7 @@ import { useAnchorProvider } from './useAnchorProvider'
 
 const RPC_URL = clusterApiUrl('devnet')
 
-const PROGRAM_ID = new PublicKey('uJ5ujCBYYNJ7V4Fpurewj9cDSPT3jHnEKLnaxYPYss9')
+const PROGRAM_ID = new PublicKey('9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf')
 const WILL_SEED = Buffer.from([119, 105, 108, 108])
 const HEIR_SEED = Buffer.from([104, 101, 105, 114])
 
