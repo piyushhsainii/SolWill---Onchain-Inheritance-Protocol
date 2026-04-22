@@ -134,9 +134,9 @@ const Dashboard = ({
                             }}
                         >
                             <ProtectionStatusCard
-                                txPending={txPending}
-                                checkinAnim={checkinAnim}
                                 nextVerificationTimestamp={formatTimestamp(activeWill.lastCheckin + activeWill.interval)}
+                                lastCheckin={activeWill.lastCheckin}
+                                intervalSeconds={activeWill.interval}
                             />
                         </motion.div>
                     </motion.div>
@@ -145,12 +145,12 @@ const Dashboard = ({
                     <AssetsComponent hasAssets={hasAssets} vaultAccount={vaultAccount} />
 
                     {/* ── 3. Verification Window ── */}
-                    <VerificationWindow
+                    {/* <VerificationWindow
                         progressPct={progressPct}
                         daysLeft={daysLeft}
                         intervalDays={intervalDays}
                         isUrgent={isUrgent}
-                    />
+                    /> */}
 
                     {/* ── 4. Designated Beneficiaries ── */}
                     <DesignatedHeirs activeHeirs={activeHeirs} avatarColors={avatarColors} />

@@ -21,7 +21,7 @@ import { useWillStore } from '@/app/store/useWillStore'
 import { useSollWillWallet } from './useSolWillWallet'
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes'
 
-const PROGRAM_ID = new PublicKey('9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf')
+const PROGRAM_ID = new PublicKey('6twd3FcXK7HKvfCJfEDod2JtMCXCs9P1Tzk8ymG5yxkK')
 const WILL_SEED = Buffer.from('will')
 const RPC_URL = clusterApiUrl('devnet')
 

@@ -15,12 +15,11 @@ import toast from 'react-hot-toast'
 import { bs58 } from '@coral-xyz/anchor/dist/cjs/utils/bytes'
 
 import IDL from '../idl/idl.json'
-import type { DeadWallet } from '../idl/idl'
 import { useAnchorProvider } from './useAnchorProvider'
 import { useWillStore } from '@/app/store/useWillStore'
 import { useSollWillWallet } from './useSolWillWallet'
 
-const PROGRAM_ID = new PublicKey('9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf')
+const PROGRAM_ID = new PublicKey('6twd3FcXK7HKvfCJfEDod2JtMCXCs9P1Tzk8ymG5yxkK')
 const WILL_SEED = Buffer.from('will')
 const VAULT_SEED = Buffer.from('vault')
 const RPC_URL = clusterApiUrl('devnet')
@@ -28,6 +27,7 @@ const RPC_URL = clusterApiUrl('devnet')
 /* ─── shared tx helper ───────────────────────────────────────────── */
 import { VersionedTransaction, TransactionMessage } from '@solana/web3.js'
 import { buildAndSend, getTokenProgramForMint } from '../utils/helper'
+import { DeadWallet } from '../idl/idl'
 
 
 
@@ -211,6 +211,7 @@ export function useDepositSPL() {
                         systemProgram: SystemProgram.programId,
                         tokenProgram: tokenProgram,
                         associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+
                     })
                     .instruction()
                 const bx = await connection.getLatestBlockhash('confirmed')

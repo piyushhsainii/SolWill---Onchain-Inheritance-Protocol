@@ -45,7 +45,8 @@ export default function DashboardPage() {
 
     const getAutoPhase = (): Phase => {
         if (!activeWill) return 0
-        if (activeHeirs.length === 0 || totalHeirShare !== 10000) return 'dashboard' // no heirs → must add  (note: shareBps is basis points so 100% = 10000)
+        if (activeHeirs.length === 0) return 1
+        if (totalHeirShare !== 10000) return 'dashboard' // no heirs → must add  (note: shareBps is basis points so 100% = 10000)
         if (!vaultAccount || vaultAccount.totalUsdValue <= 0) return 2     // no funds → can skip
         return 'dashboard'
     }

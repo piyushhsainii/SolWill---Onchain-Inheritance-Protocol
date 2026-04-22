@@ -85,7 +85,7 @@ function HydratedLayout({ children }: { children: React.ReactNode }) {
             )}
             <div style={{ display: 'flex', minHeight: '100vh' }}>
                 <Sidebar />
-                <main style={{ flex: 1, minWidth: 0 }}>
+                <main style={{ flex: 1, minWidth: 0 }} className='mt-20'>
                     {children}
                 </main>
             </div>

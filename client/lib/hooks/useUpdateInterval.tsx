@@ -11,7 +11,7 @@ import { useWillStore } from '@/app/store/useWillStore'
 import { useSollWillWallet } from './useSolWillWallet'
 import { buildAndSend } from '../utils/helper'
 
-const PROGRAM_ID = new PublicKey('9DUPFp5Hq5A5dicbSq6LE9eorg7MXMeGKK2eBrWd1Eqf')
+const PROGRAM_ID = new PublicKey('6twd3FcXK7HKvfCJfEDod2JtMCXCs9P1Tzk8ymG5yxkK')
 const RPC_URL = clusterApiUrl('devnet')
 
 export function useUpdateInterval() {

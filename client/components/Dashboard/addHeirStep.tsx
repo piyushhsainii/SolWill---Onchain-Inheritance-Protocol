@@ -104,7 +104,6 @@ export default function AddHeirsStep({
     const canAdd = address.trim().length >= 32 && effectiveShare > 0
 
     const successCount = Object.values(heirStatuses).filter(s => s === 'success').length
-    const hasAnyStatus = Object.keys(heirStatuses).length > 0
 
     const handleAdd = () => {
         if (!address.trim()) return setError('Wallet address required')
@@ -118,13 +117,10 @@ export default function AddHeirsStep({
 
     const handleComplete = async () => {
         setIsSubmitting(true)
-        // Reset all to idle first
         setHeirStatuses(Object.fromEntries(heirs.map(h => [h.id, 'idle'])))
-
         await onComplete((id, status) => {
             setHeirStatuses(prev => ({ ...prev, [id]: status }))
         })
-
         setIsSubmitting(false)
     }
 
@@ -132,7 +128,131 @@ export default function AddHeirsStep({
 
     return (
         <motion.div variants={variants} initial="hidden" animate="show" exit="exit">
-            <motion.div variants={stagger} initial="hidden" animate="show">
+            <style>{`
+                .add-heirs-wrap {
+                    width: 100%;
+                    box-sizing: border-box;
+                    overflow: hidden;
+                }
+                .input-row {
+                    display: flex;
+                    gap: 8px;
+                    align-items: stretch;
+                    width: 100%;
+                    min-width: 0;
+                }
+                .address-input-wrap {
+                    flex: 1;
+                    min-width: 0; /* critical — prevents flex child from overflowing */
+                }
+                .address-input {
+                    width: 100%;
+                    padding: 13px 14px;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-primary);
+                    font-size: 13px;
+                    letter-spacing: -0.01em;
+                    outline: none;
+                    font-family: inherit;
+                    box-sizing: border-box;
+                    min-width: 0;
+                }
+                .add-btn {
+                    width: 46px;
+                    height: 46px;
+                    min-width: 46px; /* don't let it shrink */
+                    border-radius: 14px;
+                    border: none;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    transition: background 0.2s;
+                }
+                .allocation-card {
+                    padding: 16px 18px;
+                    border-radius: 18px;
+                    background: var(--surface);
+                    border: 1px solid var(--border);
+                    margin-bottom: 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                    box-sizing: border-box;
+                    width: 100%;
+                    min-width: 0;
+                }
+                .allocation-card-inner {
+                    flex: 1;
+                    min-width: 0; /* prevent overflow */
+                }
+                .heir-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px; /* tighter on mobile */
+                    min-width: 0;
+                }
+                .heir-address {
+                    font-size: 12px;
+                    color: var(--text-primary);
+                    letter-spacing: -0.01em;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-width: 100%;
+                }
+                .heir-actions {
+                    display: flex;
+                    gap: 4px;
+                    flex-shrink: 0;
+                    align-items: center;
+                }
+                .heir-info {
+                    flex: 1;
+                    min-width: 0; /* allows text truncation to work */
+                    overflow: hidden;
+                }
+                /* shrink share pill on very small screens */
+                @media (max-width: 380px) {
+                    .share-pill {
+                        display: none;
+                    }
+                    .allocation-card {
+                        gap: 10px;
+                        padding: 12px 14px;
+                    }
+                    .add-btn {
+                        width: 42px;
+                        min-width: 42px;
+                        height: 42px;
+                    }
+                }
+                input[type=range]::-webkit-slider-thumb {
+                    appearance: none;
+                    width: 18px; height: 18px;
+                    border-radius: 50%;
+                    background: var(--primary);
+                    border: 2.5px solid white;
+                    box-shadow: 0 1px 6px rgba(0,0,0,0.18);
+                    cursor: pointer;
+                    transition: transform 0.15s ease;
+                }
+                input[type=range]::-webkit-slider-thumb:hover {
+                    transform: scale(1.2);
+                }
+                input[type=range]::-moz-range-thumb {
+                    width: 18px; height: 18px;
+                    border-radius: 50%;
+                    background: var(--primary);
+                    border: 2.5px solid white;
+                    box-shadow: 0 1px 6px rgba(0,0,0,0.18);
+                    cursor: pointer;
+                }
+            `}</style>
+
+            <motion.div variants={stagger} initial="hidden" animate="show" className="add-heirs-wrap">
 
                 {/* ── Header ── */}
                 <motion.div variants={child} style={{ marginBottom: 28 }}>
@@ -154,14 +274,10 @@ export default function AddHeirsStep({
                 </motion.div>
 
                 {/* ── Input row ── */}
-                <motion.div variants={child} style={{ marginBottom: 10 }}>
-                    <div style={{
-                        display: 'flex',
-                        gap: 8,
-                        alignItems: 'stretch',
-                    }}>
+                <motion.div variants={child} style={{ marginBottom: 10, width: '100%', boxSizing: 'border-box' }}>
+                    <div className="input-row">
                         {/* Address field */}
-                        <div style={{ flex: 1, position: 'relative' }}>
+                        <div className="address-input-wrap">
                             <motion.div
                                 animate={{
                                     borderColor: error
@@ -179,46 +295,31 @@ export default function AddHeirsStep({
                                     border: '1px solid var(--border)',
                                     background: 'var(--surface)',
                                     overflow: 'hidden',
+                                    width: '100%',
+                                    boxSizing: 'border-box',
                                 }}
                             >
                                 <input
+                                    className="address-input"
                                     value={address}
                                     onChange={e => { setAddress(e.target.value); setError('') }}
                                     onFocus={() => setFocused(true)}
                                     onBlur={() => setFocused(false)}
                                     placeholder="Solana wallet address"
-                                    style={{
-                                        width: '100%',
-                                        padding: '13px 14px',
-                                        border: 'none',
-                                        background: 'transparent',
-                                        color: 'var(--text-primary)',
-                                        fontSize: 13,
-                                        letterSpacing: '-0.01em',
-                                        outline: 'none',
-                                        fontFamily: 'inherit',
-                                        boxSizing: 'border-box',
-                                    }}
                                 />
                             </motion.div>
                         </div>
 
                         {/* Add button */}
                         <motion.button
+                            className="add-btn"
                             whileHover={canAdd ? { scale: 1.04 } : {}}
                             whileTap={canAdd ? { scale: 0.96 } : {}}
                             disabled={!canAdd}
                             onClick={handleAdd}
                             style={{
-                                width: 46, height: 46,
-                                borderRadius: 14,
-                                border: 'none',
                                 background: canAdd ? 'var(--primary)' : 'var(--border)',
-                                color: 'white',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 cursor: canAdd ? 'pointer' : 'not-allowed',
-                                flexShrink: 0,
-                                transition: 'background 0.2s',
                             }}
                         >
                             <Plus size={18} strokeWidth={2.5} />
@@ -244,21 +345,12 @@ export default function AddHeirsStep({
                 </motion.div>
 
                 {/* ── Allocation slider card ── */}
-                <motion.div variants={child} style={{
-                    padding: '16px 18px',
-                    borderRadius: 18,
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    marginBottom: 20,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
-                }}>
+                <motion.div variants={child} className="allocation-card">
                     {/* Ring */}
                     <AllocationRing pct={totalAllocated === 100 ? 100 : effectiveShare} />
 
                     {/* Slider section */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="allocation-card-inner">
                         <div style={{
                             display: 'flex', justifyContent: 'space-between',
                             alignItems: 'center', marginBottom: 10,
@@ -273,57 +365,34 @@ export default function AddHeirsStep({
                                 fontSize: 12,
                                 color: remaining === 0 ? '#43d17a' : 'var(--text-secondary)',
                                 letterSpacing: '-0.01em',
+                                flexShrink: 0,
+                                marginLeft: 8,
                             }}>
-                                {remaining}% remaining
+                                {remaining}% left
                             </span>
                         </div>
 
-                        {/* Custom slider */}
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type="range"
-                                min={1}
-                                max={100}
-                                step={1}
-                                value={share}
-                                onChange={e => setShare(Number(e.target.value))}
-                                disabled={remaining <= 0}
-                                style={{
-                                    width: '100%',
-                                    height: 4,
-                                    appearance: 'none',
-                                    background: `linear-gradient(to right, var(--primary) ${effectiveShare}%, var(--border) ${effectiveShare}%)`,
-                                    borderRadius: 999,
-                                    outline: 'none',
-                                    cursor: remaining <= 0 ? 'not-allowed' : 'pointer',
-                                    opacity: remaining <= 0 ? 0.4 : 1,
-                                }}
-                            />
-                        </div>
-
-                        <style>{`
-                            input[type=range]::-webkit-slider-thumb {
-                                appearance: none;
-                                width: 18px; height: 18px;
-                                border-radius: 50%;
-                                background: var(--primary);
-                                border: 2.5px solid white;
-                                box-shadow: 0 1px 6px rgba(0,0,0,0.18);
-                                cursor: pointer;
-                                transition: transform 0.15s ease;
-                            }
-                            input[type=range]::-webkit-slider-thumb:hover {
-                                transform: scale(1.2);
-                            }
-                            input[type=range]::-moz-range-thumb {
-                                width: 18px; height: 18px;
-                                border-radius: 50%;
-                                background: var(--primary);
-                                border: 2.5px solid white;
-                                box-shadow: 0 1px 6px rgba(0,0,0,0.18);
-                                cursor: pointer;
-                            }
-                        `}</style>
+                        <input
+                            type="range"
+                            min={1}
+                            max={100}
+                            step={1}
+                            value={share}
+                            onChange={e => setShare(Number(e.target.value))}
+                            disabled={remaining <= 0}
+                            style={{
+                                width: '100%',
+                                height: 4,
+                                appearance: 'none',
+                                background: `linear-gradient(to right, var(--primary) ${effectiveShare}%, var(--border) ${effectiveShare}%)`,
+                                borderRadius: 999,
+                                outline: 'none',
+                                cursor: remaining <= 0 ? 'not-allowed' : 'pointer',
+                                opacity: remaining <= 0 ? 0.4 : 1,
+                                display: 'block',
+                                boxSizing: 'border-box',
+                            }}
+                        />
                     </div>
                 </motion.div>
 
@@ -337,6 +406,8 @@ export default function AddHeirsStep({
                                 border: '1px solid var(--border)',
                                 overflow: 'hidden',
                                 marginBottom: 20,
+                                width: '100%',
+                                boxSizing: 'border-box',
                             }}
                         >
                             {heirs.map((heir, idx) => {
@@ -360,9 +431,11 @@ export default function AddHeirsStep({
                                                     ? 'rgba(239,68,68,0.04)'
                                                     : 'var(--surface)',
                                             transition: 'background 0.3s',
+                                            boxSizing: 'border-box',
+                                            width: '100%',
+                                            overflow: 'hidden',
                                         }}>
                                             {editingId === heir.id ? (
-                                                /* keep your existing edit mode JSX unchanged */
                                                 <motion.div
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
@@ -378,6 +451,8 @@ export default function AddHeirsStep({
                                                             color: 'var(--text-primary)',
                                                             fontSize: 12, outline: 'none',
                                                             fontFamily: 'inherit',
+                                                            width: '100%',
+                                                            boxSizing: 'border-box',
                                                         }}
                                                     />
                                                     <div style={{ display: 'flex', gap: 8 }}>
@@ -393,29 +468,29 @@ export default function AddHeirsStep({
                                                                 color: 'var(--text-primary)',
                                                                 fontSize: 12, outline: 'none',
                                                                 fontFamily: 'inherit',
+                                                                minWidth: 0,
+                                                                boxSizing: 'border-box',
                                                             }}
                                                         />
-                                                        <button onClick={() => { onUpdate(heir.id, editAddr, editShare); setEditingId(null) }}
-                                                            style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--primary)', color: 'white', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                                        <button
+                                                            onClick={() => { onUpdate(heir.id, editAddr, editShare); setEditingId(null) }}
+                                                            style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--primary)', color: 'white', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                                             Save
                                                         </button>
-                                                        <button onClick={() => setEditingId(null)}
-                                                            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                                        <button
+                                                            onClick={() => setEditingId(null)}
+                                                            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                                             Cancel
                                                         </button>
                                                     </div>
                                                 </motion.div>
                                             ) : (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                <div className="heir-row">
                                                     <HeirAvatar address={heir.walletAddress} />
 
-                                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{
-                                                            fontSize: 12, color: 'var(--text-primary)',
-                                                            letterSpacing: '-0.01em',
-                                                            overflow: 'hidden', textOverflow: 'ellipsis',
-                                                            whiteSpace: 'nowrap',
-                                                        }}>
+                                                    {/* Text — must have min-width:0 to truncate */}
+                                                    <div className="heir-info">
+                                                        <div className="heir-address">
                                                             {heir.walletAddress.slice(0, 6)}…{heir.walletAddress.slice(-4)}
                                                         </div>
                                                         <div style={{
@@ -426,8 +501,8 @@ export default function AddHeirsStep({
                                                         </div>
                                                     </div>
 
-                                                    {/* Share pill */}
-                                                    <div style={{
+                                                    {/* Share pill — hidden on very small screens via CSS */}
+                                                    <div className="share-pill" style={{
                                                         padding: '4px 10px', borderRadius: 999,
                                                         background: 'var(--primary)',
                                                         color: 'white', fontSize: 11, fontWeight: 600,
@@ -436,8 +511,8 @@ export default function AddHeirsStep({
                                                         {heir.shareBps}%
                                                     </div>
 
-                                                    {/* Status indicator OR action buttons */}
-                                                    <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+                                                    {/* Status / action buttons */}
+                                                    <div className="heir-actions">
                                                         {status === 'pending' && (
                                                             <motion.div
                                                                 animate={{ rotate: 360 }}
@@ -456,6 +531,7 @@ export default function AddHeirsStep({
                                                                     width: 22, height: 22, borderRadius: '50%',
                                                                     background: '#43d17a',
                                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                    flexShrink: 0,
                                                                 }}
                                                             >
                                                                 <Check size={12} color="white" strokeWidth={3} />
@@ -471,6 +547,7 @@ export default function AddHeirsStep({
                                                                     border: '1px solid rgba(239,68,68,0.3)',
                                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                                     fontSize: 11, color: '#ef4444', fontWeight: 700,
+                                                                    flexShrink: 0,
                                                                 }}
                                                             >
                                                                 !
@@ -482,22 +559,24 @@ export default function AddHeirsStep({
                                                                     whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
                                                                     onClick={() => { setEditingId(heir.id); setEditAddr(heir.walletAddress); setEditShare(heir.shareBps) }}
                                                                     style={{
-                                                                        width: 30, height: 30, borderRadius: 8,
+                                                                        width: 30, height: 30, minWidth: 30, borderRadius: 8,
                                                                         border: '1px solid var(--border)',
                                                                         background: 'transparent', cursor: 'pointer',
                                                                         fontSize: 11, color: 'var(--text-secondary)',
                                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                        flexShrink: 0,
                                                                     }}
                                                                 >✎</motion.button>
                                                                 <motion.button
                                                                     whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
                                                                     onClick={() => onRemove(heir.id)}
                                                                     style={{
-                                                                        width: 30, height: 30, borderRadius: 8,
+                                                                        width: 30, height: 30, minWidth: 30, borderRadius: 8,
                                                                         border: '1px solid rgba(239,68,68,0.2)',
                                                                         background: 'rgba(239,68,68,0.06)',
                                                                         cursor: 'pointer',
                                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                        flexShrink: 0,
                                                                     }}
                                                                 >
                                                                     <X size={13} color="#ef4444" strokeWidth={2.5} />
@@ -536,6 +615,8 @@ export default function AddHeirsStep({
                             display: 'flex',
                             alignItems: 'center',
                             gap: 8,
+                            boxSizing: 'border-box',
+                            width: '100%',
                         }}
                     >
                         <div style={{
@@ -579,6 +660,7 @@ export default function AddHeirsStep({
                         cursor: canProceed ? 'pointer' : 'not-allowed',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         gap: 8, fontFamily: 'inherit',
+                        boxSizing: 'border-box',
                     }}
                 >
                     {isSubmitting ? (
@@ -601,6 +683,5 @@ export default function AddHeirsStep({
 
             </motion.div>
         </motion.div>
-
     )
 }
