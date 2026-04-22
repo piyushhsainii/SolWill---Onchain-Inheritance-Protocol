@@ -1,8 +1,7 @@
-import { AlertTriangle, } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import React from 'react'
 import { motion } from 'framer-motion'
 import { fadeUp } from '@/lib/utils/helper'
-
 
 const VerificationWindow = ({
     progressPct,
@@ -16,7 +15,7 @@ const VerificationWindow = ({
     daysLeft: number;
 }) => {
     return (
-        <motion.div variants={fadeUp} style={{ gridColumn: 'span 3' }}>
+        <motion.div variants={fadeUp} className="col-span-3" style={{ minWidth: 0 }}>
             <motion.div
                 whileHover={{ y: -2, boxShadow: '0 16px 48px rgba(36,43,53,0.10)', borderColor: isUrgent ? '#ef4444' : '#242B35' }}
                 transition={{ duration: 0.2 }}
@@ -31,6 +30,7 @@ const VerificationWindow = ({
                     overflow: 'hidden',
                     boxShadow: '0 2px 12px rgba(36,43,53,0.06)',
                     transition: 'box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease',
+                    minWidth: 0,
                 }}
             >
                 {isUrgent && (

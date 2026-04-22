@@ -64,6 +64,8 @@ const DesignatedHeirs = ({
                 display: 'flex',
                 flexDirection: 'column',
                 boxShadow: '0 2px 12px rgba(36,43,53,0.06)',
+                boxSizing: 'border-box',
+                minWidth: 0,
             }}
         >
             {/* Header */}
@@ -85,6 +87,7 @@ const DesignatedHeirs = ({
                             display: 'flex', alignItems: 'center', gap: 6,
                             fontSize: 11, padding: '7px 14px', borderRadius: 999,
                             background: '#EEEEE9', border: '1px solid #E4E4DF', cursor: 'pointer',
+                            flexShrink: 0,
                         }}
                     >
                         <UserPlus size={12} /> Add
@@ -96,7 +99,7 @@ const DesignatedHeirs = ({
                 Authorised entities for automatic estate transfer
             </p>
 
-            {/* Heir cards — wrap on mobile */}
+            {/* Heir cards — wrap on all screen sizes */}
             <div style={{
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -182,11 +185,11 @@ const DesignatedHeirs = ({
     )
 
     if (mobile) {
-        return <motion.div variants={fadeUp}>{inner}</motion.div>
+        return <motion.div variants={fadeUp} style={{ minWidth: 0 }}>{inner}</motion.div>
     }
 
     return (
-        <motion.div variants={fadeUp} style={{ gridColumn: 'span 9' }}>
+        <motion.div variants={fadeUp} className="col-span-9" style={{ minWidth: 0 }}>
             {inner}
         </motion.div>
     )

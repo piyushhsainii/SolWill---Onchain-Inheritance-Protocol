@@ -36,6 +36,7 @@ const AssetsComponent = ({
                 transition: 'all 0.25s ease',
                 fontWeight: 300,
                 letterSpacing: '-0.02em',
+                minWidth: 0,
             }}
         >
             <div style={{
@@ -57,6 +58,7 @@ const AssetsComponent = ({
                             border: '1px solid #E4E4DF', borderRadius: 12,
                             fontSize: 11, cursor: 'pointer', padding: '7px 14px',
                             fontFamily: 'inherit', fontWeight: 300, transition: 'all 0.2s ease',
+                            flexShrink: 0,
                         }}
                     >
                         Manage
@@ -99,9 +101,10 @@ const AssetsComponent = ({
                                     padding: 12, borderRadius: 16,
                                     border: '1px solid transparent',
                                     transition: 'all 0.2s ease',
+                                    minWidth: 0,
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
                                     <div style={{
                                         width: 40, height: 40, borderRadius: 12,
                                         background: asset.bg, display: 'flex',
@@ -111,7 +114,7 @@ const AssetsComponent = ({
                                     }}>
                                         <img src={asset.symbol} style={{ width: 24, height: 24 }} />
                                     </div>
-                                    <div>
+                                    <div style={{ minWidth: 0 }}>
                                         <div style={{ fontSize: 14, color: '#1A1A18', fontWeight: 300 }}>
                                             {asset.name}
                                         </div>
@@ -120,7 +123,7 @@ const AssetsComponent = ({
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
+                                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
                                     <div style={{ fontSize: 14, color: '#1A1A18', fontWeight: 300 }}>
                                         {asset.value}
                                     </div>
@@ -159,6 +162,7 @@ const AssetsComponent = ({
                                     background: '#EEEEE9', border: '1px solid #E4E4DF',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', transition: 'all 0.2s ease',
+                                    flexShrink: 0,
                                 }}
                             >
                                 <Plus size={15} color="#555550" />
@@ -172,13 +176,12 @@ const AssetsComponent = ({
         </motion.div>
     )
 
-    // On mobile/tablet the parent controls layout — no gridColumn wrapper needed
     if (mobile) {
-        return <motion.div variants={fadeUp}>{inner}</motion.div>
+        return <motion.div variants={fadeUp} style={{ minWidth: 0 }}>{inner}</motion.div>
     }
 
     return (
-        <motion.div variants={fadeUp} style={{ gridColumn: 'span 7' }}>
+        <motion.div variants={fadeUp} className="col-span-7" style={{ minWidth: 0 }}>
             {inner}
         </motion.div>
     )
