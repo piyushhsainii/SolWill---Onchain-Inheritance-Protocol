@@ -1,6 +1,8 @@
-# SolWill
+# SolWill - Your crypto, protected forever
 
-**Your crypto, protected forever.**
+<img width="2515" height="1107" alt="solwill-hero" src="https://github.com/user-attachments/assets/2e6ccd2d-7e51-4862-85ec-056b55536e79" />
+
+---
 
 > Built for the [Solana Colosseum Frontier Hackathon](https://frontier.colosseum.org) — open track submission.
 
@@ -105,7 +107,7 @@ SolWill never holds your keys. It never touches your assets outside of what the 
 
 | Layer            | Technology                                     |
 | ---------------- | ---------------------------------------------- |
-| Smart contract   | Anchor (Rust) — 5 instructions, 3 PDAs         |
+| Smart contract   | Anchor (Rust)     |
 | Frontend         | Next.js 14 · TypeScript · App Router           |
 | Animations       | Framer Motion                                  |
 | State management | Zustand                                        |
@@ -114,39 +116,6 @@ SolWill never holds your keys. It never touches your assets outside of what the 
 | Token transfers  | SPL Token program                              |
 | Wallet support   | Phantom, Backpack, Solflare via Wallet Adapter |
 | Network          | Solana (devnet → mainnet)                      |
-
----
-
-## Program Architecture
-
-### Accounts
-
-**`WillAccount`** — PDA seeded by `["will", owner]`. Stores the owner pubkey, check-in interval, last check-in timestamp, heir count, total BPS allocated, asset list, and current status.
-
-**`VaultAccount`** — PDA seeded by `["vault", willAccount]`. Program-owned. Holds all deposited SOL and SPL token balances. No external party can withdraw without a valid program instruction signed by the owner (or heirs, post-trigger).
-
-**`HeirAccount`** — PDA seeded by `["heir", heirWalletAddress, willAccount]`. One per heir. Stores wallet address, basis point share, and claimed status. The `claimed` flag prevents double-claiming at the program level.
-
-### Instructions
-
-| Instruction                | Caller | Description                                        |
-| -------------------------- | ------ | -------------------------------------------------- |
-| `initialize`               | Owner  | Creates WillAccount and VaultAccount PDAs          |
-| `deposit_sol`              | Owner  | Transfers SOL from owner wallet to vault           |
-| `deposit_spl_tokens`       | Owner  | Transfers SPL tokens from owner ATA to vault ATA   |
-| `add_heirs_to_will`        | Owner  | Creates a HeirAccount PDA for a given wallet + BPS |
-| `update_heir_from_will`    | Owner  | Updates heir wallet address and/or BPS             |
-| `remove_heir_from_will`    | Owner  | Closes HeirAccount PDA and reclaims rent           |
-| `checkin_will`             | Owner  | Resets `last_checkin` to current clock timestamp   |
-| `trigger` (permissionless) | Anyone | Flips will to Triggered state after deadline       |
-| `claim_ll`                 | Heir   | Transfers heir's proportional share from vault     |
-| `dissolve_will`            | Owner  | Cancels will and returns all vault assets to owner |
-
----
-
-## Error Handling
-
-The program defines 18 custom error codes covering every failure path — insufficient balance, BPS overflow, unauthorized callers, already-claimed wills, active will protection, invalid account relationships, and more. The frontend surfaces these with user-readable messages.
 
 ---
 
@@ -160,41 +129,6 @@ The judging criteria for Frontier — technical execution, innovation, real-worl
 
 ---
 
-## Security Considerations
-
-SolWill handles irreversible, high-value transfers. Several attack surfaces were considered during design:
-
-**Grief attacks** — an attacker cannot trigger a will early because the `require!` guard on `trigger` is validated entirely by `clock.unix_timestamp`, which is set by the Solana validator. The only way to bypass it is a validator-level attack, not an application-level one.
-
-**Double-claim prevention** — the `claimed` flag on each `HeirAccount` is set atomically during the claim transaction. The program checks this flag before any transfer, making double-claiming impossible at the protocol level.
-
-**BPS overflow** — the program tracks `total_bps` on the `WillAccount` and rejects any `add_heirs` instruction that would cause it to exceed 10,000. This is enforced on-chain, not just in the frontend.
-
-**Unauthorized withdrawal** — the vault PDA is owned by the program. No instruction exists that allows direct withdrawal without owner authority (pre-trigger) or heir verification (post-trigger).
-
-A professional audit of the program's authority checks, clock validation logic, and multi-asset transfer instructions is planned before mainnet launch.
-
----
-
-## Project Status
-
-- [x] Anchor program deployed on Solana devnet
-- [x] Full end-to-end flow: create will → deposit → add heirs → check in → trigger → claim
-- [x] Next.js frontend with Framer Motion animations
-- [x] Zustand state management with on-chain sync hooks
-- [x] Helius RPC integration for real-time data
-- [ ] Mainnet deployment (post-audit)
-- [ ] Compressed NFT (cNFT) claim support
-- [ ] Mobile app (React Native)
-- [ ] Email / push notifications via Helius webhooks
-
----
-
-## Program ID
-
-```
-uJ5ujCBYYNJ7V4Fpurewj9cDSPT3jHnEKLnaxYPYss9
-```
 
 Network: Solana Devnet
 
