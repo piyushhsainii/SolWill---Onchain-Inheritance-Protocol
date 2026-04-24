@@ -25,11 +25,9 @@ export default function DashboardPage() {
         willAccount,
         vaultAccount,
         heirs: storeHeirs,
+
     } = useWillStore()
-    const {
-        loading,
-        refresh
-    } = useAnchorProvider()
+
 
     const [simWill, setSimWill] = useState<WillAccount | null>(willAccount ?? null)
     const [simHeirs, setSimHeirs] = useState<Heir[]>(storeHeirs ?? [])
@@ -66,8 +64,6 @@ export default function DashboardPage() {
             setLoadingStep(true)
             const success = await createWill(days)
             if (!success) return
-
-            await refresh()  // ← wait for store to update with the new willAccount
 
             setStepDir('forward')
             setPhase(1)      // ← now activeWill is populated, phase moves forward
@@ -107,8 +103,6 @@ export default function DashboardPage() {
             if (!success) return
             await new Promise(res => setTimeout(res, 1500))
         }
-
-        await refresh()
         setStepDir('forward')
         setPhase(2)
     }
@@ -162,7 +156,6 @@ export default function DashboardPage() {
     console.log('vault', vaultAccount)
 
     useEffect(() => {
-        if (loading) return
         if (!willAccount) {
             setPhase(0)
             return
@@ -171,11 +164,11 @@ export default function DashboardPage() {
             setPhase(1)
             return
         }
-        if (activeWill && activeHeirs.length > 0 && totalHeirShare === 10000) {
+        if (activeWill && activeHeirs.length > 0) {
             setPhase('dashboard')
             return
         }
-    }, [loading, activeWill, activeHeirs.length, totalHeirShare, vaultAccount?.totalUsdValue])
+    }, [activeWill, activeHeirs.length, totalHeirShare, vaultAccount?.totalUsdValue])
     return (
         <>
             <style>{`

@@ -520,28 +520,11 @@ function PrimaryButton({
     )
 }
 
-/* ─── Divider ────────────────────────────────────────────────────── */
 function Divider() {
     return <div style={{ height: 1, background: '#F0F0EB', margin: '20px 0' }} />
 }
 
 
-async function getTokenProgramForMint(
-    connection: Connection,
-    mint: PublicKey
-): Promise<PublicKey> {
-    const accountInfo = await connection.getAccountInfo(mint)
-    if (!accountInfo) throw new Error('Mint not found')
-
-    if (accountInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
-        return TOKEN_2022_PROGRAM_ID
-    }
-    return TOKEN_PROGRAM_ID
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   Main Page
-   ═══════════════════════════════════════════════════════════════════ */
 export default function ManageFundsPage() {
     const solPrice = useSolPrice()
     const { depositSOL, loading: depositSolLoading } = useDepositSOL()

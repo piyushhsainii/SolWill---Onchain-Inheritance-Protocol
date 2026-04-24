@@ -221,9 +221,9 @@ export function useDepositSPL() {
                     lastValidBlockHeight: bx.lastValidBlockHeight
 
                 }).add(ix)
-                const logs = await connection.simulateTransaction(tx)
-                // const sig = await buildAndSend(raw, connection, ix, ownerPk)
-                console.log('[depositSPL] confirmed:', logs)
+                // const logs = await connection.simulateTransaction(tx)
+                const sig = await buildAndSend(raw, connection, ix, ownerPk)
+                console.log('[depositSPL] confirmed:', sig)
 
                 toast.success('Token deposited!', { id: toastId })
                 await refresh()

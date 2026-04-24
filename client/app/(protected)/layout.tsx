@@ -8,12 +8,6 @@ import { useAnchorProvider } from '@/lib/hooks/useAnchorProvider'
 import Sidebar from '@/components/ui/sidebar'
 import { UseAnchorProviderReturn } from '@/lib/utils/helper'
 
-// ─── Anchor context ────────────────────────────────────────────────────────────
-// Context exists purely to share ONE useAnchorProvider instance across the tree.
-// Without it, every consumer would call the hook independently and get separate
-// program/pda instances. If NO child currently needs program/pdas/refresh,
-// you can delete the context entirely and call useAnchorProvider in the
-// component that needs it.
 type AnchorCtxValue = Pick<UseAnchorProviderReturn, 'refresh' | 'program' | 'pdas' | 'loading'>
 
 const AnchorCtx = createContext<AnchorCtxValue>({
@@ -57,11 +51,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
 // ─── Inner layout: chain data + sidebar ───────────────────────────────────────
 function HydratedLayout({ children }: { children: React.ReactNode }) {
-    const { user } = usePrivy()
     const { program, pdas, refresh, loading, error, Heirs } = useAnchorProvider()
-
-    const willAccount = useWillStore(s => s.willAccount)
-    const vaultAccount = useWillStore(s => s.vaultAccount)
 
     // Sync heirs into store whenever they arrive
     useEffect(() => {
@@ -72,26 +62,6 @@ function HydratedLayout({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         useWillStore.getState().setConnected(true)
     }, []) // runs once on mount; `authenticated` is guaranteed true here
-
-    const firstLoad = loading && willAccount === null && vaultAccount === null
-
-    // Single loading state — wallet hydration or first chain fetch
-    if (!user?.wallet?.address || firstLoad) {
-        return (
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '100vh',
-                color: 'var(--color-text-secondary)',
-                fontSize: 14,
-                gap: 10,
-            }}>
-                <Spinner />
-                {!user?.wallet?.address ? 'Connecting wallet…' : 'Loading your will…'}
-            </div>
-        )
-    }
 
     return (
         <AnchorCtx.Provider value={{ refresh, program, pdas, loading }}>

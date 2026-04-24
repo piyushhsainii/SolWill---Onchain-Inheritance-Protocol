@@ -1,190 +1,427 @@
-import { Plus, TrendingUp } from 'lucide-react'
-import React from 'react'
-import NoAssetsState from './noAssetState'
-import { motion } from 'framer-motion'
-import Link from 'next/link'
-import { VaultAccount } from '@/app/store/useWillStore'
-import { fadeUp } from '@/lib/utils/helper'
+'use client'
 
-const AssetsComponent = ({
-    hasAssets,
-    vaultAccount,
-    mobile = false,
-}: {
-    hasAssets: boolean
-    vaultAccount: VaultAccount | null
-    mobile?: boolean
-}) => {
-    const inner = (
-        <motion.div
-            whileHover={{
-                y: -2,
-                boxShadow: '0 18px 42px rgba(36,43,53,0.08)',
-                borderColor: '#242B35',
-            }}
-            transition={{ duration: 0.22 }}
-            style={{
-                background: '#FFFFFF',
-                border: '1px solid #E4E4DF',
-                borderRadius: 24,
-                padding: 24,
-                height: '100%',
-                boxSizing: 'border-box',
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '0 2px 12px rgba(36,43,53,0.06)',
-                transition: 'all 0.25s ease',
-                fontWeight: 300,
-                letterSpacing: '-0.02em',
-                minWidth: 0,
-            }}
-        >
-            <div style={{
-                display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', marginBottom: 18,
-            }}>
-                <span style={{
-                    fontSize: 10, textTransform: 'uppercase', color: '#8A8A82',
-                    fontWeight: 300, letterSpacing: '0.12em',
-                }}>
-                    Locked Assets Architecture
-                </span>
-                <Link href="/manage-funds">
-                    <motion.button
-                        whileHover={{ scale: 1.03, background: '#242B35', color: '#FFFFFF', borderColor: '#242B35' }}
-                        whileTap={{ scale: 0.97 }}
-                        style={{
-                            background: '#EEEEE9', color: '#555550',
-                            border: '1px solid #E4E4DF', borderRadius: 12,
-                            fontSize: 11, cursor: 'pointer', padding: '7px 14px',
-                            fontFamily: 'inherit', fontWeight: 300, transition: 'all 0.2s ease',
-                            flexShrink: 0,
-                        }}
-                    >
-                        Manage
-                    </motion.button>
-                </Link>
-            </div>
+import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, X, ExternalLink, Copy, Check, Loader2 } from 'lucide-react'
+import { Connection, PublicKey } from '@solana/web3.js'
+import { getMint } from '@solana/spl-token'
 
-            {hasAssets ? (
-                <>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-                        {[
-                            {
-                                bg: 'linear-gradient(135deg,#9945FF,#7c3aed)',
-                                symbol: '/sol-logo.png',
-                                name: 'Solana',
-                                sub: `${vaultAccount?.sol} SOL`,
-                                value: `${vaultAccount?.sol}`,
-                                change: '+2.4%',
-                                up: true,
-                            },
-                            {
-                                bg: 'linear-gradient(135deg,#2775CA,#1d4ed8)',
-                                symbol: 'usdc-logo.png',
-                                name: 'USD Coin',
-                                sub: `${vaultAccount?.usdc} USDC`,
-                                value: `${vaultAccount?.usdc}`,
-                                change: 'Stable',
-                                up: null,
-                            },
-                        ].map((asset, i) => (
-                            <motion.div
-                                key={asset.name}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.15 + i * 0.08, duration: 0.35 }}
-                                whileHover={{ background: '#F7F7F4', borderColor: '#242B35' }}
-                                style={{
-                                    display: 'flex', alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: 12, borderRadius: 16,
-                                    border: '1px solid transparent',
-                                    transition: 'all 0.2s ease',
-                                    minWidth: 0,
-                                }}
-                            >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
-                                    <div style={{
-                                        width: 40, height: 40, borderRadius: 12,
-                                        background: asset.bg, display: 'flex',
-                                        alignItems: 'center', justifyContent: 'center',
-                                        flexShrink: 0,
-                                        boxShadow: '0 6px 16px rgba(36,43,53,0.12)',
-                                    }}>
-                                        <img src={asset.symbol} style={{ width: 24, height: 24 }} />
-                                    </div>
-                                    <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontSize: 14, color: '#1A1A18', fontWeight: 300 }}>
-                                            {asset.name}
-                                        </div>
-                                        <div style={{ fontSize: 11, color: '#8A8A82', marginTop: 2 }}>
-                                            {asset.sub}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
-                                    <div style={{ fontSize: 14, color: '#1A1A18', fontWeight: 300 }}>
-                                        {asset.value}
-                                    </div>
-                                    <div style={{
-                                        fontSize: 11,
-                                        color: asset.up === true ? '#16a34a' : asset.up === false ? '#dc2626' : '#8A8A82',
-                                        display: 'flex', alignItems: 'center', gap: 4,
-                                        justifyContent: 'flex-end', marginTop: 2, fontWeight: 300,
-                                    }}>
-                                        {asset.up === true && <TrendingUp size={10} />}
-                                        {asset.change}
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
+interface TokenAsset {
+    mint: string
+    symbol: string
+    amount: number
+    icon?: string
+    usdValue?: number
+}
 
-                    <div style={{
-                        borderTop: '1px solid #E4E4DF', marginTop: 14, paddingTop: 16,
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    }}>
-                        <div>
-                            <div style={{ fontSize: 11, color: '#8A8A82', marginBottom: 4, fontWeight: 300 }}>
-                                Total Managed Estate Value
-                            </div>
-                            <div style={{ fontSize: 24, color: '#1A1A18', fontWeight: 300 }}>
-                                ${vaultAccount?.totalUsdValue.toLocaleString()}
-                            </div>
-                        </div>
-                        <Link href="/manage-funds">
-                            <motion.button
-                                whileHover={{ scale: 1.08, background: '#242B35', borderColor: '#242B35' }}
-                                whileTap={{ scale: 0.95 }}
-                                style={{
-                                    width: 38, height: 38, borderRadius: 999,
-                                    background: '#EEEEE9', border: '1px solid #E4E4DF',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    cursor: 'pointer', transition: 'all 0.2s ease',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <Plus size={15} color="#555550" />
-                            </motion.button>
-                        </Link>
-                    </div>
-                </>
-            ) : (
-                <NoAssetsState />
-            )}
-        </motion.div>
-    )
+const MOCK_ASSETS: TokenAsset[] = [
+    {
+        mint: '4ohwDPjnsyKuk9HpsghAE7X8BzxVSCZTXFXcjRK1LK8o',
+        symbol: 'Solana',
+        amount: 1,
+        icon: 'https://cryptologos.cc/logos/solana-sol-logo.png',
+        usdValue: 142.5,
+    },
+    {
+        mint: '4ohwDPjnsyKuk9HpsghAE7X8BzxVSCZTXFXcjRK1LK8o',
+        symbol: 'USDC',
+        amount: 2000,
+        icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
+        usdValue: 2000,
+    },
+]
 
-    if (mobile) {
-        return <motion.div variants={fadeUp} style={{ minWidth: 0 }}>{inner}</motion.div>
+interface MintDetails {
+    address: string
+    decimals: number
+    supply: string
+    isInitialized: boolean
+    freezeAuthority: string | null
+    mintAuthority: string | null
+}
+
+function shortAddr(addr: string) {
+    return `${addr.slice(0, 6)}...${addr.slice(-6)}`
+}
+
+function TokenDialog({ token, onClose }: { token: TokenAsset; onClose: () => void }) {
+    const [details, setDetails] = useState<MintDetails | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [copied, setCopied] = useState(false)
+
+    useEffect(() => {
+        async function fetchMint() {
+            try {
+                const connection = new Connection('https://api.devnet.solana.com', 'confirmed')
+                const mintPubkey = new PublicKey(token.mint)
+                const mintInfo = await getMint(connection, mintPubkey)
+                setDetails({
+                    address: token.mint,
+                    decimals: mintInfo.decimals,
+                    supply: mintInfo.supply.toString(),
+                    isInitialized: mintInfo.isInitialized,
+                    freezeAuthority: mintInfo.freezeAuthority?.toBase58() ?? null,
+                    mintAuthority: mintInfo.mintAuthority?.toBase58() ?? null,
+                })
+            } catch (e) {
+                setError('Could not fetch mint data from blockchain.')
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchMint()
+    }, [token.mint])
+
+    function copyAddr() {
+        navigator.clipboard.writeText(token.mint)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1800)
     }
 
     return (
-        <motion.div variants={fadeUp} className="col-span-7" style={{ minWidth: 0 }}>
-            {inner}
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={onClose}
+            style={{
+                position: 'fixed', inset: 0, zIndex: 100,
+                background: 'rgba(26,26,24,0.38)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '20px',
+            }}
+        >
+            <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    width: '100%', maxWidth: '420px',
+                    background: 'var(--surface)',
+                    borderRadius: 'var(--radius-xl)',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 24px 64px rgba(36,43,53,0.16)',
+                    overflow: 'hidden',
+                }}
+            >
+                {/* Dialog header */}
+                <div style={{
+                    padding: '20px 20px 16px',
+                    borderBottom: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: '14px',
+                }}>
+                    <div style={{
+                        width: '48px', height: '48px', borderRadius: '14px',
+                        background: 'var(--bg)',
+                        border: '1px solid var(--border)',
+                        overflow: 'hidden', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        {token.icon
+                            ? <img src={token.icon} style={{ width: '32px', height: '32px', objectFit: 'contain' }} alt={token.symbol} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                            : <span style={{ fontSize: '18px', fontWeight: 500, color: 'var(--text-primary)' }}>{token.symbol[0]}</span>
+                        }
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '17px', fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{token.symbol}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Token details</div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            width: '32px', height: '32px', borderRadius: '10px',
+                            background: 'var(--bg)', border: '1px solid var(--border)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: 'var(--text-secondary)',
+                            flexShrink: 0,
+                            transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg)' }}
+                    >
+                        <X size={15} />
+                    </button>
+                </div>
+
+                {/* Mint address row */}
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        Mint Address
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                        <span style={{
+                            fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'monospace',
+                            flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0,
+                        }}>
+                            {token.mint}
+                        </span>
+                        <button
+                            onClick={copyAddr}
+                            style={{
+                                flexShrink: 0, padding: '5px 10px', borderRadius: '8px',
+                                background: 'var(--surface)', border: '1px solid var(--border)',
+                                display: 'flex', alignItems: 'center', gap: '5px',
+                                cursor: 'pointer', fontSize: '12px', color: 'var(--text-secondary)',
+                                transition: 'all 0.15s ease',
+                            }}
+                        >
+                            {copied ? <Check size={12} color="var(--success)" /> : <Copy size={12} />}
+                            {copied ? 'Copied' : 'Copy'}
+                        </button>
+                        <a
+                            href={`https://explorer.solana.com/address/${token.mint}?cluster=devnet`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                                flexShrink: 0, padding: '5px 8px', borderRadius: '8px',
+                                background: 'var(--surface)', border: '1px solid var(--border)',
+                                display: 'flex', alignItems: 'center',
+                                cursor: 'pointer', color: 'var(--text-secondary)',
+                                transition: 'all 0.15s ease', textDecoration: 'none',
+                            }}
+                        >
+                            <ExternalLink size={12} />
+                        </a>
+                    </div>
+                </div>
+
+                {/* Mint details body */}
+                <div style={{ padding: '20px' }}>
+                    {loading && (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            gap: '10px', padding: '24px 0', color: 'var(--text-muted)',
+                        }}>
+                            <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+                            <span style={{ fontSize: '14px' }}>Fetching on-chain data…</span>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div style={{
+                            padding: '14px', borderRadius: 'var(--radius-md)',
+                            background: '#fef2f2', border: '1px solid #fecaca',
+                            color: 'var(--danger)', fontSize: '13px',
+                        }}>
+                            {error}
+                        </div>
+                    )}
+
+                    {details && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {([
+                                { label: 'Decimals', value: details.decimals.toString(), mono: true },
+                                { label: 'Total Supply', value: Number(details.supply).toLocaleString(), mono: true },
+                                { label: 'Initialized', value: details.isInitialized ? '✓ Yes' : '✗ No', mono: false },
+                                { label: 'Mint Authority', value: details.mintAuthority ? shortAddr(details.mintAuthority) : 'None (frozen)', mono: false },
+                                { label: 'Freeze Authority', value: details.freezeAuthority ? shortAddr(details.freezeAuthority) : 'None', mono: false },
+                            ] as { label: string; value: string; mono: boolean }[]).map(({ label, value, mono }) => (
+                                <div
+                                    key={label}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        padding: '11px 14px', borderRadius: 'var(--radius-md)',
+                                        background: 'var(--bg)', border: '1px solid var(--border)',
+                                        gap: '12px',
+                                    }}
+                                >
+                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', flexShrink: 0 }}>{label}</span>
+                                    <span style={{
+                                        fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)',
+                                        fontFamily: mono ? 'monospace' : 'inherit',
+                                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    }}>
+                                        {value}
+                                    </span>
+                                </div>
+                            ))}
+
+                            {/* Holdings row */}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                padding: '11px 14px', borderRadius: 'var(--radius-md)',
+                                background: 'var(--primary)',
+                                marginTop: '4px', gap: '12px',
+                            }}>
+                                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>Your holdings</span>
+                                <span style={{ fontSize: '13px', fontWeight: 500, color: '#ffffff', fontFamily: 'monospace' }}>
+                                    {token.amount.toLocaleString()} {token.symbol}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
         </motion.div>
     )
 }
 
-export default AssetsComponent
+export default function LockedAssets() {
+    const router = useRouter()
+    const [selected, setSelected] = useState<TokenAsset | null>(null)
+
+    const totalUSD = MOCK_ASSETS.reduce((s, a) => s + (a.usdValue ?? 0), 0)
+
+    return (
+        <>
+            <div style={{
+                background: 'var(--surface)',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border)',
+                boxShadow: 'var(--shadow-card)',
+                overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+                width: '100%',       // fill parent
+                maxWidth: '100%',
+                minWidth: 0,         // don't push past parent
+                boxSizing: 'border-box',
+            }}>
+                {/* Header */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '18px 20px 14px',
+                    gap: '12px', minWidth: 0,
+                }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{
+                            fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.1em',
+                            textTransform: 'uppercase', fontWeight: 500,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                            Locked Assets Architecture
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                            {MOCK_ASSETS.length} token{MOCK_ASSETS.length !== 1 ? 's' : ''} secured in vault
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => router.push('/manage-funds')}
+                        style={{
+                            flexShrink: 0,
+                            padding: '7px 16px', borderRadius: 'var(--radius-sm)',
+                            background: 'var(--bg)', border: '1px solid var(--border)',
+                            fontSize: '13px', fontWeight: 400, color: 'var(--text-primary)',
+                            cursor: 'pointer', letterSpacing: '-0.01em',
+                            transition: 'all 0.18s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border)' }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg)' }}
+                    >
+                        Manage
+                    </button>
+                </div>
+
+                {/* Token list */}
+                <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
+                    {MOCK_ASSETS.map((asset, i) => (
+                        <motion.div
+                            key={asset.mint + i}
+                            onClick={() => setSelected(asset)}
+                            whileHover={{ scale: 1.008, boxShadow: 'var(--shadow-hover)' }}
+                            whileTap={{ scale: 0.995 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '12px',
+                                padding: '13px 14px', borderRadius: 'var(--radius-lg)',
+                                background: 'var(--surface)', border: '1px solid var(--border)',
+                                cursor: 'pointer', boxShadow: 'var(--shadow-card)',
+                                minWidth: 0, overflow: 'hidden',
+                            }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#c8c8c2' }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)' }}
+                        >
+                            <div style={{
+                                width: '40px', height: '40px', borderRadius: '12px',
+                                background: 'var(--bg)', border: '1px solid var(--border)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0, overflow: 'hidden',
+                            }}>
+                                {asset.icon
+                                    ? <img src={asset.icon} style={{ width: '26px', height: '26px', objectFit: 'contain' }} alt={asset.symbol} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                    : <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{asset.symbol[0]}</span>
+                                }
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                                    {asset.symbol}
+                                </div>
+                                <div style={{
+                                    fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px',
+                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                    fontFamily: 'monospace',
+                                }}>
+                                    {shortAddr(asset.mint)}
+                                </div>
+                            </div>
+
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                                    {asset.amount.toLocaleString()}
+                                </div>
+                                {asset.usdValue !== undefined && (
+                                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                        ${asset.usdValue.toLocaleString()}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ color: 'var(--border)', flexShrink: 0 }}>
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                    <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* Footer */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '16px 20px',
+                    borderTop: '1px solid var(--border)',
+                    marginTop: '14px',
+                    minWidth: 0,
+                }}>
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
+                            Total Managed Estate Value
+                        </div>
+                        <div style={{ fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginTop: '2px' }}>
+                            ${totalUSD.toLocaleString()}
+                        </div>
+                    </div>
+
+                    <motion.button
+                        whileHover={{ scale: 1.06 }}
+                        whileTap={{ scale: 0.94 }}
+                        onClick={() => router.push('/manage-funds')}
+                        style={{
+                            flexShrink: 0,
+                            width: '42px', height: '42px', borderRadius: '50%',
+                            background: 'var(--primary)', border: 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', color: '#ffffff',
+                            boxShadow: '0 4px 16px rgba(36,43,53,0.22)',
+                        }}
+                    >
+                        <Plus size={18} strokeWidth={2} />
+                    </motion.button>
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {selected && <TokenDialog token={selected} onClose={() => setSelected(null)} />}
+            </AnimatePresence>
+        </>
+    )
+}

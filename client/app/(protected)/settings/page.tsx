@@ -44,12 +44,11 @@ export default function WillSettings() {
 
     const daysError = (() => {
         if (effectiveDays === null) return null
-        if (effectiveDays < 7) return 'Minimum interval is 7 days.'
+        if (effectiveDays < 1) return 'Minimum interval is 1 day.'
         if (effectiveDays > 1825) return 'Maximum interval is 5 years (1825 days).'
         if (effectiveDays === currentIntervalDays) return 'This is already your current interval.'
         return null
     })()
-
     const canUpdate = !!effectiveDays && !daysError && !updateLoading
 
     /* ── Handlers ────────────────────────────────────────────────── */

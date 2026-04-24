@@ -30,7 +30,6 @@ export type WillAccount = {
 
 export type VaultAccount = {
   sol: number;
-  usdc: number;
   totalUsdValue: number;
   assets: Asset[];
 };
@@ -81,7 +80,6 @@ const now = () => Math.floor(Date.now() / 1000);
 
 const calcVaultTotals = (assets: Asset[]): VaultAccount => ({
   sol: assets.find((a) => a.symbol === "SOL")?.amount ?? 0,
-  usdc: assets.find((a) => a.symbol === "USDC")?.amount ?? 0,
   totalUsdValue: assets.reduce((sum, a) => sum + a.usdValue, 0),
   assets,
 });

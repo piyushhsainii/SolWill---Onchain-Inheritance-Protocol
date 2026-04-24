@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { AnchorProvider, BN, Program } from '@coral-xyz/anchor'
 import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js'
 import toast from 'react-hot-toast'
@@ -22,31 +22,16 @@ export function useUpdateInterval() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
-    const anchorWallet = useMemo(() => {
-        if (!wallet || typeof wallet.signAndSendTransaction !== 'function') {
-            toast.error('Wallet disconnected. Please reconnect.')
-            return false
-        }
-        if (!wallet || !wallet.address || !wallet.signTransaction) return null
-        return {
-            publicKey: wallet.address,
-            signTransaction: (tx: any) => wallet.signTransaction!(tx),
-        }
-    }, [wallet])
-
-    const program = useMemo(() => {
-        if (!anchorWallet) return null
-        const conn = new Connection(RPC_URL, 'confirmed')
-        const provider = new AnchorProvider(conn, anchorWallet as any, { commitment: 'confirmed' })
-        return new Program<DeadWallet>(IDL as any, provider)
-    }, [anchorWallet])
-
     const updateInterval = useCallback(
         async (intervalDays: number): Promise<boolean> => {
+            // Guard — only runs when user actually clicks, never on render
+            if (!wallet?.address || !wallet.signTransaction) {
+                toast.error('Wallet not connected.')
+                return false
+            }
 
-
-            if (!program || !wallet) {
-                toast.error('Program not ready.')
+            if (typeof wallet.signAndSendTransaction !== 'function') {
+                toast.error('Wallet does not support signing. Please reconnect.')
                 return false
             }
 
@@ -60,23 +45,31 @@ export function useUpdateInterval() {
                 return false
             }
 
-            const intervalSeconds = new BN(intervalDays * 86400)
-
             setLoading(true)
             setTxPending(true)
             setError(null)
 
             const toastId = toast.loading('Updating interval…')
-            const connection = new Connection(RPC_URL, 'confirmed')
 
             try {
+                // Lazy — built only when user triggers the action
+                const connection = new Connection(RPC_URL, 'confirmed')
+                const anchorWallet = {
+                    publicKey: wallet.address,
+                    signTransaction: (tx: any) => wallet.signTransaction!(tx),
+                }
+                const provider = new AnchorProvider(connection, anchorWallet as any, { commitment: 'confirmed' })
+                const program = new Program<DeadWallet>(IDL as any, provider)
+
+                const intervalSeconds = new BN(intervalDays * 86400)
+
                 const ix = await program.methods
                     .updateWillFun(intervalSeconds)
                     .accounts({ signer: wallet.address })
                     .instruction()
 
                 const sig = await buildAndSend(wallet, connection, ix, new PublicKey(wallet.address))
-
+                console.log('Update interval sig:', sig)
 
                 toast.success(`Interval updated to ${intervalDays} days`, { id: toastId })
                 await refresh()
@@ -91,7 +84,7 @@ export function useUpdateInterval() {
                 setTxPending(false)
             }
         },
-        [wallet, program, refresh, setTxPending]
+        [wallet, refresh, setTxPending]
     )
 
     return { updateInterval, loading, error }

@@ -9,6 +9,7 @@ import {
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "@solana/spl-token";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { VaultData, WillData } from "../hooks/useAnchorProvider";
 
 export const fadeUp = {
   hidden: { opacity: 0, y: 20, scale: 0.98 },
@@ -41,6 +42,8 @@ export interface UseAnchorProviderReturn {
   refresh: () => Promise<void>;
   program: Program<DeadWallet> | null;
   pdas: { willPda: PublicKey | null; vaultPda: PublicKey | null };
+  willData: WillData;
+  vaultData: VaultData;
   Heirs: Heir[];
 }
 

@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { AnchorProvider, Program } from '@coral-xyz/anchor'
-import { clusterApiUrl, Connection, PublicKey, Transaction } from '@solana/web3.js'
+import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js'
 import toast from 'react-hot-toast'
 import IDL from '../idl/idl.json'
 import { DeadWallet } from '../idl/idl'
@@ -23,27 +23,11 @@ export function useDissolveWill() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
-    const anchorWallet = useMemo(() => {
-        if (!wallet?.address || !wallet.signTransaction) return null
-        return {
-            publicKey: wallet.address,
-            signTransaction: (tx: any) => wallet.signTransaction!(tx),
-
-        }
-    }, [wallet])
-
-    const program = useMemo(() => {
-        if (!anchorWallet) return null
-        const conn = new Connection(RPC_URL, 'confirmed')
-        const provider = new AnchorProvider(conn, anchorWallet as any, { commitment: 'confirmed' })
-        return new Program<DeadWallet>(IDL as any, provider)
-    }, [anchorWallet])
-
     const dissolveWill = useCallback(
         async (): Promise<boolean> => {
-
-            if (!program || !wallet) {
-                toast.error('Program not ready.')
+            // Everything is built here — nothing runs until the user clicks
+            if (!wallet?.address || !wallet.signTransaction) {
+                toast.error('Wallet not connected.')
                 return false
             }
 
@@ -52,31 +36,27 @@ export function useDissolveWill() {
             setError(null)
 
             const toastId = toast.loading('Dissolving will…')
-            const connection = new Connection(RPC_URL, 'confirmed')
 
             try {
+                // Lazy — only created when actually needed
+                const connection = new Connection(RPC_URL, 'confirmed')
+                const anchorWallet = {
+                    publicKey: wallet.address,
+                    signTransaction: (tx: any) => wallet.signTransaction!(tx),
+                }
+                const provider = new AnchorProvider(connection, anchorWallet as any, { commitment: 'confirmed' })
+                const program = new Program<DeadWallet>(IDL as any, provider)
+
                 const ix = await program.methods
                     .dissolveWill()
                     .accounts({ signer: wallet.address, tokenProgram: TOKEN_PROGRAM_ID })
                     .instruction()
 
+                const sig = await buildAndSend(wallet, connection, ix, new PublicKey(wallet.address))
+                console.log('Dissolve sig:', sig)
 
-                const bx = await connection.getLatestBlockhash();
-                const tx = new Transaction({
-                    feePayer: new PublicKey(wallet.address),
-                    blockhash: bx.blockhash,
-                    lastValidBlockHeight: bx.lastValidBlockHeight,
-
-                }).add(ix);
-
-                let logs = await connection.simulateTransaction(tx);
-                console.log(logs)
-                // const sig = await buildAndSend(wallet, connection, ix, new PublicKey(wallet.address))
-
-                console.log(sig)
                 toast.success('Will dissolved successfully.', { id: toastId })
 
-                // Clear store state since the will no longer exists on-chain
                 useWillStore.setState({
                     willAccount: null,
                     vaultAccount: null,
@@ -95,7 +75,7 @@ export function useDissolveWill() {
                 setTxPending(false)
             }
         },
-        [wallet, program, refresh, setTxPending]
+        [wallet, refresh, setTxPending]
     )
 
     return { dissolveWill, loading, error }
