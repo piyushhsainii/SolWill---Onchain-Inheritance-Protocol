@@ -56,10 +56,10 @@ function TokenDialog({ token, onClose }: { token: Asset; onClose: () => void }) 
         async function fetchMint() {
             try {
                 const connection = new Connection('https://api.devnet.solana.com', 'confirmed')
-                const mintPubkey = new PublicKey(token.mint)
+                const mintPubkey = new PublicKey(token.mint ?? "Solana")
                 const mintInfo = await getMint(connection, mintPubkey)
                 setDetails({
-                    address: token.mint,
+                    address: token.mint ?? "Solana",
                     decimals: mintInfo.decimals,
                     supply: mintInfo.supply.toString(),
                     isInitialized: mintInfo.isInitialized,
@@ -76,7 +76,7 @@ function TokenDialog({ token, onClose }: { token: Asset; onClose: () => void }) 
     }, [token.mint])
 
     function copyAddr() {
-        navigator.clipboard.writeText(token.mint)
+        navigator.clipboard.writeText(token.mint ?? "Solana")
         setCopied(true)
         setTimeout(() => setCopied(false), 1800)
     }

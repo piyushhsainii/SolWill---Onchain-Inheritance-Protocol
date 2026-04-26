@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@solana/buffer-layout-utils": [
+        "./node_modules/@solana/buffer-layout-utils/lib/types/index.d.ts"
+      ]
     }
   },
   "include": [
