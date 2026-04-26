@@ -103,56 +103,44 @@ const Dashboard = ({
             `}</style>
 
             <motion.div
-                key="dashboard"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-                style={{ width: '100%', boxSizing: 'border-box' }}
+                variants={stagger}
+                initial="hidden"
+                animate="show"
+                className="dashboard-grid"
             >
-                <motion.div
-                    variants={stagger}
-                    initial="hidden"
-                    animate="show"
-                    className="dashboard-grid"
-                >
-                    {/* ── 1. Protection Status ── */}
-                    <motion.div variants={fadeUp} className="col-span-5">
-                        <motion.div
-                            whileHover={{ y: -2, boxShadow: '0 16px 48px rgba(36,43,53,0.10)', borderColor: '#242B35' }}
-                            transition={{ duration: 0.2 }}
-                            style={{
-                                background: '#FFFFFF',
-                                border: '1px solid #E4E4DF',
-                                borderRadius: '20px',
-                                padding: '24px',
-                                height: '100%',
-                                boxSizing: 'border-box',
-                                overflow: 'hidden',
-                                position: 'relative',
-                                boxShadow: '0 2px 12px rgba(36,43,53,0.06)',
-                                transition: 'box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease',
-                            }}
-                        >
-                            <ProtectionStatusCard
-                                nextVerificationTimestamp={formatTimestamp(activeWill.lastCheckin + activeWill.interval)}
-                                lastCheckin={activeWill.lastCheckin}
-                                intervalSeconds={activeWill.interval}
-                            />
-                        </motion.div>
+                {/* ── 1. Protection Status ── */}
+                <motion.div variants={fadeUp} className="col-span-5" style={{ minWidth: 0 }}>
+                    <motion.div
+                        whileHover={{ y: -2, boxShadow: '0 16px 48px rgba(36,43,53,0.10)', borderColor: '#242B35' }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                            background: '#FFFFFF',
+                            border: '1px solid #E4E4DF',
+                            borderRadius: '20px',
+                            padding: '24px',
+                            height: '100%',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden',
+                            position: 'relative',
+                            boxShadow: '0 2px 12px rgba(36,43,53,0.06)',
+                            transition: 'box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease',
+                        }}
+                    >
+                        <ProtectionStatusCard
+                            nextVerificationTimestamp={formatTimestamp(activeWill.lastCheckin + activeWill.interval)}
+                            lastCheckin={activeWill.lastCheckin}
+                            intervalSeconds={activeWill.interval}
+                        />
                     </motion.div>
+                </motion.div>
 
-                    {/* ── 2. Assets Architecture ── */}
-                    <AssetsComponent hasAssets={hasAssets} vaultAccount={vaultAccount} />
+                {/* ── 2. Assets Architecture ── */}
+                <motion.div variants={fadeUp} className="col-span-7" style={{ minWidth: 0 }}>
+                    <AssetsComponent />
+                </motion.div>
 
-                    {/* ── 3. Verification Window ── */}
-                    {/* <VerificationWindow
-                        progressPct={progressPct}
-                        daysLeft={daysLeft}
-                        intervalDays={intervalDays}
-                        isUrgent={isUrgent}
-                    /> */}
-
-                    {/* ── 4. Designated Beneficiaries ── */}
+                {/* ── 3. Designated Beneficiaries ── */}
+                <motion.div variants={fadeUp} className="col-span-12" style={{ minWidth: 0 }}>
                     <DesignatedHeirs activeHeirs={activeHeirs} avatarColors={avatarColors} />
                 </motion.div>
             </motion.div>

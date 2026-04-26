@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-dead_wallet = "4pHVi1JXM5BL64Z92iH57wBxqdC3DWfsLgyCG9jDnUZx"
+dead_wallet = "6Qu5vc8BYaBetkA9gkmy7D2JCQmyVyR6CCcaQjyA4sCx"
 
 [registry]
 url = "https://api.apr.dev"

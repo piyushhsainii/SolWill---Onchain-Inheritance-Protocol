@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useWillStore } from '@/app/store/useWillStore'
 import { useLogout } from '@privy-io/react-auth'
+import { motion } from 'framer-motion'
 
 const NAV_ITEMS = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -53,17 +54,21 @@ export default function Sidebar() {
                     display: 'flex', alignItems: 'center', gap: '12px',
                     padding: '8px 10px', marginBottom: '26px',
                 }}>
-                    <div style={{
-                        width: '42px', height: '42px', borderRadius: '14px',
-                        background: '#EEEEE9', border: '1px solid #E4E4DF',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        overflow: 'hidden',
-                    }}>
+                    <motion.div
+                        whileHover={{ scale: 1.2, rotate: -6 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+
+                        style={{
+                            width: '42px', height: '42px', borderRadius: '14px',
+                            background: '#EEEEE9', border: '1px solid #E4E4DF',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            overflow: 'hidden',
+                        }}>
                         <img src="/solwillicon.jpeg" className="h-full w-full object-cover" alt="SolWill" />
-                    </div>
+                    </motion.div>
                     <div>
                         <div className="tracking-tight" style={{ fontSize: '15px', color: '#1A1A18', fontWeight: 300 }}>SolWill</div>
-                        <div className="tracking-tight" style={{ fontSize: '11px', color: '#8A8A82', marginTop: 1, fontWeight: 300 }}>Secure Legacy Vault</div>
+                        <div className="tracking-tight" style={{ fontSize: '13px', color: '#8A8A82', marginTop: 1, fontWeight: 300 }}>Secure Legacy Vault</div>
                     </div>
                 </div>
 
@@ -80,7 +85,7 @@ export default function Sidebar() {
                                         padding: '11px 12px', borderRadius: '14px',
                                         background: active ? '#EEEEE9' : 'transparent',
                                         border: active ? '1px solid #E4E4DF' : '1px solid transparent',
-                                        color: '#1A1A18', fontSize: '14px', fontWeight: 300,
+                                        color: '#1A1A18', fontSize: '16px', fontWeight: 500,
                                         cursor: 'pointer', transition: 'all 0.18s ease',
                                     }}
                                     onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = '#F7F7F4'; e.currentTarget.style.borderColor = '#E4E4DF' } }}

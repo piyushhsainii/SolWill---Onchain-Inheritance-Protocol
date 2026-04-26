@@ -80,7 +80,7 @@ pub fn withdraw_spl(ctx:Context<WithdrawSPL>, amt:u32) -> Result<()> {
 
     if updated_balance == 0 {
         // remove it from the assets and close the spl token account
-       ctx.accounts.will_account.assets =  ctx.accounts.will_account.assets.iter().filter(|data | data.mint != ctx.accounts.vault_mint.key()).map(|d| SPLTOKENS { balance:d.balance, mint:d.mint }).collect();
+       ctx.accounts.will_account.assets =  ctx.accounts.will_account.assets.iter().filter(|data | data.mint != ctx.accounts.vault_mint.key()).map(|d| SPLTOKENS { balance:d.balance, mint:d.mint, decimals:d.decimals }).collect();
 
         let cpi_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),

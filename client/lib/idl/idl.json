@@ -1,5 +1,5 @@
 {
-  "address": "4pHVi1JXM5BL64Z92iH57wBxqdC3DWfsLgyCG9jDnUZx",
+  "address": "6Qu5vc8BYaBetkA9gkmy7D2JCQmyVyR6CCcaQjyA4sCx",
   "metadata": {
     "name": "dead_wallet",
     "version": "0.1.0",
@@ -1352,6 +1352,10 @@
           {
             "name": "balance",
             "type": "u64"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
           }
         ]
       }

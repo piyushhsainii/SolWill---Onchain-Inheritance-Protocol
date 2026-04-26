@@ -62,7 +62,6 @@ pub fn deposit_spl(ctx:Context<DepositSpl>, amount:u64) -> Result<()> {
     });
     
     transfer_checked(ix,amount,ctx.accounts.mint.decimals)?;
-    
     let  mint_val =  ctx.accounts.will_account.assets.iter_mut().find(|data|  data.mint == ctx.accounts.mint.key());  
     
     match mint_val {
@@ -71,7 +70,7 @@ pub fn deposit_spl(ctx:Context<DepositSpl>, amount:u64) -> Result<()> {
         },
         None => { 
             require!(ctx.accounts.will_account.assets.len() < 5, Errors::TooManyAssets);
-            ctx.accounts.will_account.assets.push(SPLTOKENS {  mint:ctx.accounts.mint.key(), balance: amount })
+            ctx.accounts.will_account.assets.push(SPLTOKENS {  mint:ctx.accounts.mint.key(), balance: amount, decimals: ctx.accounts.mint.decimals })
         }
     }
     Ok(())

@@ -164,7 +164,7 @@ export default function DashboardPage() {
             setPhase(1)
             return
         }
-        if (activeWill && activeHeirs.length > 0) {
+        if (activeWill && activeHeirs.filter((h) => h.onChain == true).length > 0) {
             setPhase('dashboard')
             return
         }

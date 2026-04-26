@@ -6,31 +6,32 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, X, ExternalLink, Copy, Check, Loader2 } from 'lucide-react'
 import { Connection, PublicKey } from '@solana/web3.js'
 import { getMint } from '@solana/spl-token'
+import { Asset, useWillStore, VaultAccount } from '@/app/store/useWillStore'
 
-interface TokenAsset {
-    mint: string
-    symbol: string
-    amount: number
-    icon?: string
-    usdValue?: number
-}
+// interface TokenAsset {
+//     mint: string
+//     symbol: string
+//     amount: number
+//     icon?: string
+//     usdValue?: number
+// }
 
-const MOCK_ASSETS: TokenAsset[] = [
-    {
-        mint: '4ohwDPjnsyKuk9HpsghAE7X8BzxVSCZTXFXcjRK1LK8o',
-        symbol: 'Solana',
-        amount: 1,
-        icon: 'https://cryptologos.cc/logos/solana-sol-logo.png',
-        usdValue: 142.5,
-    },
-    {
-        mint: '4ohwDPjnsyKuk9HpsghAE7X8BzxVSCZTXFXcjRK1LK8o',
-        symbol: 'USDC',
-        amount: 2000,
-        icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
-        usdValue: 2000,
-    },
-]
+// const MOCK_ASSETS: TokenAsset[] = [
+//     {
+//         mint: '4ohwDPjnsyKuk9HpsghAE7X8BzxVSCZTXFXcjRK1LK8o',
+//         symbol: 'Solana',
+//         amount: 1,
+//         icon: 'https://cryptologos.cc/logos/solana-sol-logo.png',
+//         usdValue: 142.5,
+//     },
+//     {
+//         mint: '4ohwDPjnsyKuk9HpsghAE7X8BzxVSCZTXFXcjRK1LK8o',
+//         symbol: 'USDC',
+//         amount: 2000,
+//         icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png',
+//         usdValue: 2000,
+//     },
+// ]
 
 interface MintDetails {
     address: string
@@ -45,7 +46,7 @@ function shortAddr(addr: string) {
     return `${addr.slice(0, 6)}...${addr.slice(-6)}`
 }
 
-function TokenDialog({ token, onClose }: { token: TokenAsset; onClose: () => void }) {
+function TokenDialog({ token, onClose }: { token: Asset; onClose: () => void }) {
     const [details, setDetails] = useState<MintDetails | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -267,9 +268,11 @@ function TokenDialog({ token, onClose }: { token: TokenAsset; onClose: () => voi
 
 export default function LockedAssets() {
     const router = useRouter()
-    const [selected, setSelected] = useState<TokenAsset | null>(null)
+    const [selected, setSelected] = useState<Asset | null>(null)
 
-    const totalUSD = MOCK_ASSETS.reduce((s, a) => s + (a.usdValue ?? 0), 0)
+    const {
+        vaultAccount
+    } = useWillStore()
 
     return (
         <>
@@ -279,11 +282,13 @@ export default function LockedAssets() {
                 border: '1px solid var(--border)',
                 boxShadow: 'var(--shadow-card)',
                 overflow: 'hidden',
-                display: 'flex', flexDirection: 'column',
-                width: '100%',       // fill parent
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
                 maxWidth: '100%',
-                minWidth: 0,         // don't push past parent
+                minWidth: 0,
                 boxSizing: 'border-box',
+                contain: 'layout',  // hard browser-level containment
             }}>
                 {/* Header */}
                 <div style={{
@@ -300,7 +305,7 @@ export default function LockedAssets() {
                             Locked Assets Architecture
                         </div>
                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            {MOCK_ASSETS.length} token{MOCK_ASSETS.length !== 1 ? 's' : ''} secured in vault
+                            {vaultAccount?.assets.length} token{vaultAccount?.assets.length !== 1 ? 's' : ''} secured in vault
                         </div>
                     </div>
                     <button
@@ -322,9 +327,9 @@ export default function LockedAssets() {
 
                 {/* Token list */}
                 <div style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, minWidth: 0 }}>
-                    {MOCK_ASSETS.map((asset, i) => (
+                    {vaultAccount?.assets.map((asset, i) => (
                         <motion.div
-                            key={asset.mint + i}
+                            key={i}
                             onClick={() => setSelected(asset)}
                             whileHover={{ scale: 1.008, boxShadow: 'var(--shadow-hover)' }}
                             whileTap={{ scale: 0.995 }}
@@ -360,7 +365,7 @@ export default function LockedAssets() {
                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                     fontFamily: 'monospace',
                                 }}>
-                                    {shortAddr(asset.mint)}
+                                    {shortAddr(asset.mint ?? "")}
                                 </div>
                             </div>
 
@@ -397,7 +402,7 @@ export default function LockedAssets() {
                             Total Managed Estate Value
                         </div>
                         <div style={{ fontSize: '24px', fontWeight: 300, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginTop: '2px' }}>
-                            ${totalUSD.toLocaleString()}
+                            ${ }
                         </div>
                     </div>
 

@@ -11,7 +11,7 @@ import { useWillStore } from '@/app/store/useWillStore'
 import { useSollWillWallet } from './useSolWillWallet'
 import { buildAndSend } from '../utils/helper'
 
-const PROGRAM_ID = new PublicKey('4pHVi1JXM5BL64Z92iH57wBxqdC3DWfsLgyCG9jDnUZx')
+const PROGRAM_ID = new PublicKey('6Qu5vc8BYaBetkA9gkmy7D2JCQmyVyR6CCcaQjyA4sCx')
 const RPC_URL = clusterApiUrl('devnet')
 
 export function useUpdateInterval() {
@@ -35,8 +35,8 @@ export function useUpdateInterval() {
                 return false
             }
 
-            if (intervalDays < 7) {
-                toast.error('Minimum interval is 7 days.')
+            if (intervalDays < 1) {
+                toast.error('Minimum interval is 1 day.')
                 return false
             }
 

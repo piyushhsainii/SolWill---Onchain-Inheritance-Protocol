@@ -18,7 +18,7 @@ import { DeadWallet } from '../idl/idl'
 import { useSollWillWallet } from './useSolWillWallet'
 import { UseAnchorProviderReturn } from '../utils/helper'
 
-const PROGRAM_ID = new PublicKey('4pHVi1JXM5BL64Z92iH57wBxqdC3DWfsLgyCG9jDnUZx')
+const PROGRAM_ID = new PublicKey('6Qu5vc8BYaBetkA9gkmy7D2JCQmyVyR6CCcaQjyA4sCx')
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'https://api.devnet.solana.com'
 const WILL_SEED = Buffer.from('will')
 const VAULT_SEED = Buffer.from('vault')
@@ -350,7 +350,7 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                             splAssets.push({
                                 symbol: meta?.symbol ?? mintStr.slice(0, 6),
                                 mint: mintStr,
-                                amount: balance.toNumber() / Math.pow(10, decimals),
+                                amount: balance.toNumber(),
                                 usdPrice: 0,
                                 usdValue: 0,
                                 icon: meta?.icon,

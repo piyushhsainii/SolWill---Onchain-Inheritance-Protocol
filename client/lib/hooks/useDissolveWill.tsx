@@ -12,7 +12,7 @@ import { useSollWillWallet } from './useSolWillWallet'
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { buildAndSend } from '../utils/helper'
 
-const PROGRAM_ID = new PublicKey('4pHVi1JXM5BL64Z92iH57wBxqdC3DWfsLgyCG9jDnUZx')
+const PROGRAM_ID = new PublicKey('6Qu5vc8BYaBetkA9gkmy7D2JCQmyVyR6CCcaQjyA4sCx')
 const RPC_URL = clusterApiUrl('devnet')
 
 export function useDissolveWill() {

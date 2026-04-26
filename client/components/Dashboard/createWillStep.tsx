@@ -90,11 +90,11 @@ export default function CreateWillStep({
                             width: 72, height: 72, borderRadius: 22,
                             margin: '0 auto 16px',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: 'var(--primary)',
                             boxShadow: '0 14px 34px rgba(0,0,0,0.12)',
                         }}
                     >
-                        <ShieldCheck size={30} color="white" />
+                        <img src={"/solwillicon.jpeg"} className='h-full w-full' alt="SolWill Icon" />
+
                     </motion.div>
 
                     <h2 style={{

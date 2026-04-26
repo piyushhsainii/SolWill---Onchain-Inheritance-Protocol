@@ -25,7 +25,8 @@ pub struct WillAccount {
 #[derive(Clone,InitSpace,AnchorSerialize, AnchorDeserialize,)]
 pub struct SPLTOKENS{
    pub mint:Pubkey,
-   pub balance:u64
+   pub balance:u64,
+   pub decimals:u8
 }
 
 #[account]
