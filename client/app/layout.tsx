@@ -74,14 +74,14 @@ export const metadata: Metadata = {
 
   openGraph: {
     type: "website",
-    url: "https://solwill.xyz",
+    url: "https://solwill.vercel.app",
     siteName: "SolWill",
     title: "SolWill — Your Crypto, Protected Forever",
     description:
       "The first trustless crypto inheritance protocol on Solana. Securely pass SOL, tokens, and NFTs to your heirs with code, not trust.",
     images: [
       {
-        url: "/og-image.png", // put inside /public
+        url: "/solwill-hero.png", // put inside /public
         width: 1200,
         height: 630,
         alt: "SolWill - Trustless Crypto Inheritance on Solana",
@@ -95,7 +95,7 @@ export const metadata: Metadata = {
     title: "SolWill — Your Crypto, Protected Forever",
     description:
       "Create a trustless on-chain will for your SOL, SPL tokens, and NFTs. Built on Solana.",
-    images: ["/og-image.png"],
+    images: ["/solwill-hero.png"],
     creator: "@solwill",
     site: "@solwill",
   },

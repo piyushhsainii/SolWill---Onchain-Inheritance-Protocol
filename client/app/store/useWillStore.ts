@@ -16,6 +16,7 @@ export type Asset = {
   usdPrice: number;
   usdValue: number;
   icon?: string;
+  decimals: number;
 };
 
 type WillStatus = "Active" | "Grace Period" | "Triggered" | "Paused";
@@ -72,6 +73,7 @@ type State = {
     usdPrice: number;
     mint?: string;
     icon?: string;
+    decimals: number;
   }) => void;
   withdrawAsset: (symbol: string, amount: number) => void;
 };
@@ -174,7 +176,7 @@ export const useWillStore = create<State>((set, get) => ({
     })),
 
   // ── Assets ───────────────────────────────────────────────────────────────
-  depositAsset: ({ symbol, amount, usdPrice, mint, icon }) =>
+  depositAsset: ({ symbol, amount, usdPrice, mint, icon, decimals }) =>
     set((state) => {
       const current = state.vaultAccount?.assets ?? [];
       const existing = current.find((a) => a.symbol === symbol);
@@ -186,6 +188,7 @@ export const useWillStore = create<State>((set, get) => ({
                   amount: a.amount + amount,
                   usdPrice,
                   usdValue: (a.amount + amount) * usdPrice,
+                  decimals: a.decimals,
                 }
               : a,
           )
@@ -198,6 +201,7 @@ export const useWillStore = create<State>((set, get) => ({
               amount,
               usdPrice,
               usdValue: amount * usdPrice,
+              decimals: decimals,
             },
           ];
       return { vaultAccount: calcVaultTotals(next) };

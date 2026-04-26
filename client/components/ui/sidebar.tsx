@@ -105,12 +105,8 @@ export default function Sidebar() {
                     padding: '12px', borderRadius: '18px',
                     border: '1px solid #E4E4DF', background: '#F7F7F4', marginTop: '10px',
                 }}>
-                    <div style={{
-                        width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0,
-                        background: '#242B35', display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', fontSize: '12px', color: '#FFFFFF', fontWeight: 300,
-                    }}>
-                        {connected ? publicKey?.slice(0, 2).toUpperCase() : 'SW'}
+                    <div className='rounded-full border-2 border-black'>
+                        <img src="/solwill-user-pfp.png" alt="" className='rounded-full h-10 w-10' />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="tracking-tight" style={{ fontSize: '13px', color: '#1A1A18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 300 }}>

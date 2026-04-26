@@ -22,6 +22,7 @@ const PROGRAM_ID = new PublicKey('6Qu5vc8BYaBetkA9gkmy7D2JCQmyVyR6CCcaQjyA4sCx')
 const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? 'https://api.devnet.solana.com'
 const WILL_SEED = Buffer.from('will')
 const VAULT_SEED = Buffer.from('vault')
+const HEIR_SEED = Buffer.from('heir')
 
 const TOKEN_META: Record<string, { symbol: string; decimals: number; icon?: string }> = {
     EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: { symbol: 'USDC', decimals: 6, icon: '/icons/usdc.svg' },
@@ -181,11 +182,10 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
             const splAssets: Asset[] = []
 
             if (rawWillData && Array.isArray((rawWillData as any).assets)) {
-                const rawAssets = rawWillData.assets as Array<{ mint: PublicKey; balance: number }>
+                const rawAssets = rawWillData.assets as Array<{ mint: PublicKey; balance: number, decimals: number }>
                 await Promise.all(
-                    rawAssets.map(async ({ mint, balance }) => {
+                    rawAssets.map(async ({ mint, balance, decimals }) => {
                         const mintStr = mint.toBase58()
-                        const decimals = balance;
                         // const decimals = await resolveDecimals(conn, mint)
                         // const meta = TOKEN_META[mintStr]
                         splAssets.push({
@@ -195,6 +195,7 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                             usdPrice: 0,
                             usdValue: 0,
                             icon: '/meta-icon.png',
+                            decimals: decimals
                         })
                     }),
                 )
@@ -215,6 +216,10 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                 amount: solAmount,
                 usdPrice: solPrice,
                 usdValue: solAmount * solPrice,
+                decimals: 9,
+                icon: "/sol-logo.png",
+                mint: SOL_MINT
+
             }
 
             const hydratedSpl = splAssets.map((a) => ({
@@ -341,11 +346,11 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                 // ── 3. SPL assets from willAccount ───────────────────────────────
                 const splAssets: Asset[] = []
                 if (rawWillData && Array.isArray(rawWillData.assets)) {
-                    const rawAssets = rawWillData.assets as Array<{ mint: PublicKey; balance: BN }>
+                    const rawAssets = rawWillData.assets as Array<{ mint: PublicKey; balance: BN, decimals: number }>
                     await Promise.all(
-                        rawAssets.map(async ({ mint, balance }) => {
+                        rawAssets.map(async ({ mint, balance, decimals }) => {
                             const mintStr = mint.toBase58()
-                            const decimals = await resolveDecimals(conn, mint)
+
                             const meta = TOKEN_META[mintStr]
                             splAssets.push({
                                 symbol: meta?.symbol ?? mintStr.slice(0, 6),
@@ -354,6 +359,7 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                                 usdPrice: 0,
                                 usdValue: 0,
                                 icon: meta?.icon,
+                                decimals: decimals
                             })
                         }),
                     )
@@ -375,7 +381,8 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                         usdPrice: solPrice,
                         usdValue: 0,
                         icon: "/sol-logo.png",
-                        mint: ""
+                        mint: "",
+                        decimals: 9
                     },
                     ...splAssets.map((a) => ({
                         ...a,
@@ -384,7 +391,8 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                         amount: a.amount ?? 0,
                         symbol: "",
                         icon: "/meta-icon.png",
-                        mint: a.mint
+                        mint: a.mint,
+                        decimals: a.decimals
                     })),
                 ]
 
@@ -415,7 +423,15 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                 // prog.account.heir.all() with no filter fetches ALL heirs on-chain
                 // across every user — memcmp scopes it to only this willPda
                 const heirAccounts = await prog.account.heir.all();
-                const heirs = heirAccounts.map((data) => {
+                const myHeirs = heirAccounts.filter((data) => {
+                    const [expectedPda] = PublicKey.findProgramAddressSync(
+                        [HEIR_SEED, data.account.walletAddress.toBuffer(), willPda.toBuffer()],
+                        PROGRAM_ID
+                    )
+                    return expectedPda.equals(data.publicKey)
+
+                });
+                const heirs = myHeirs.map((data) => {
                     return {
                         id: data.publicKey.toBase58(),
                         onChain: true,
@@ -423,6 +439,7 @@ export function useAnchorProvider(): UseAnchorProviderReturn {
                         walletAddress: data.account.walletAddress.toBase58()
                     }
                 })
+
                 storeActions().setHeirs(heirs)
                 setHeirs(heirs)
 
