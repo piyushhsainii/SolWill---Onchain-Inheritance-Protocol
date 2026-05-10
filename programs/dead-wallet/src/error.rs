@@ -42,7 +42,8 @@ pub enum Errors {
     #[msg("Invalid Heir Account")]
     InvalidHeirAccount,
     #[msg("Invalid Token Program")]
-    InvalidTokenProgram
-
+    InvalidTokenProgram,
+    #[msg("InsufficientFundsForRent")]
+    InsufficientFundsForRent
 
 }

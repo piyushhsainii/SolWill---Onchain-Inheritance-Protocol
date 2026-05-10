@@ -126,6 +126,7 @@ export default function ClaimWillPage() {
                 input.trim(),
                 publicKey?.toBase58() ?? null
             )
+            console.log('result', result)
             setInfo(result)
         } catch (err: any) {
             setLoadError(err.message || 'Failed to load will')
@@ -144,11 +145,19 @@ export default function ClaimWillPage() {
         }
     }, [info, claimWill, handleLoad])
 
+
+
     const isTriggered = info?.status === 'triggered'
     const isClaimed = info?.status === 'claimed'
     const isActive = info?.status === 'active'
     const isHeir = info?.heirBps != null
     const canClaim = isTriggered && isHeir && !isClaimed && connected
+
+    console.log(isTriggered)
+    console.log(isClaimed)
+    console.log(isActive)
+    console.log(isHeir)
+    console.log(canClaim)
 
     const stagger = {
         hidden: {},

@@ -13,7 +13,7 @@ import { useSollWillWallet } from './useSolWillWallet'
 import { useAnchor } from '@/app/(protected)/layout'
 import { DeadWallet } from '../idl/idl'
 
-const PROGRAM_ID = new PublicKey('FCLjiGPR8s4oxSi4jMd4Ra1SsJzxuN5FXq5zw8ueTsRE')
+const PROGRAM_ID = new PublicKey('DBtGHctsxjb6NdEsXE5MmQFfFRm5LK1qEKZ7FqueTuxi')
 const WILL_SEED = Buffer.from('will')
 const HEIR_SEED = Buffer.from('heir')
 const RPC_URL = clusterApiUrl('devnet')

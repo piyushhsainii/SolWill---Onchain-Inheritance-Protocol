@@ -23,7 +23,7 @@ import { DeadWallet } from '../idl/idl'
 import { getTokenProgramForMint } from '../utils/helper'
 import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 
-const PROGRAM_ID = new PublicKey('FCLjiGPR8s4oxSi4jMd4Ra1SsJzxuN5FXq5zw8ueTsRE')
+const PROGRAM_ID = new PublicKey('DBtGHctsxjb6NdEsXE5MmQFfFRm5LK1qEKZ7FqueTuxi')
 const WILL_SEED = Buffer.from('will')
 const VAULT_SEED = Buffer.from('vault')
 const HEIR_SEED = Buffer.from('heir')
@@ -83,7 +83,8 @@ export async function loadWillClaimInfo(
     let willData: IdlAccounts<DeadWallet>['willAccount']
     try {
         willData = await (program.account as any).willAccount.fetch(willPda)
-    } catch {
+    } catch (err) {
+        console.log(err)
         throw new Error('Will account not found for this public key')
     }
 
@@ -92,16 +93,16 @@ export async function loadWillClaimInfo(
     try {
         const vaultData = await program.account.willAccount.fetch(willPda);
         console.log(vaultData)
-        vaultSolBalance = (vaultData.totalBal) / 1_000_000_000
+        vaultSolBalance = (willData.totalBal as BN).toNumber() / 1_000_000_000
     } catch { }
-
+    console.log('will data', willData)
     const lastCheckIn = (willData.lastCheckIn as BN).toNumber()
     const interval = (willData.interval as BN).toNumber()
     const claimed = willData.claimed as boolean
     const nowSecs = Math.floor(Date.now() / 1000)
     const expiresAt = lastCheckIn + interval
     const secondsUntilExpiry = expiresAt - nowSecs
-
+    console.log(`raw claimed`, willData.claimed)
     let status: WillClaimStatus = 'active'
     if (claimed) status = 'claimed'
     else if (secondsUntilExpiry <= 0) status = 'triggered'
@@ -117,11 +118,40 @@ export async function loadWillClaimInfo(
                 [HEIR_SEED, claimerPk.toBuffer(), willPda.toBuffer()],
                 PROGRAM_ID
             )
-            const heirData = await (program.account as any).heir.fetch(heirPdaKey)
+            const heirData = await program.account.heir.fetch(heirPdaKey)
+            const heirClaimed = heirData?.status && JSON.stringify(heirData.status) !== JSON.stringify({ active: {} })
+            if (heirClaimed) status = 'claimed'
+            else if (claimed) status = 'claimed'
+            // ✅ set these immediately after fetch — before any other awaits
+            console.log(`CLAIMED`, heirData)
+            console.log(`BPS`, heirData.bps)
             heirBps = heirData.bps as number
             heirPda = heirPdaKey.toBase58()
-        } catch {
-            // Not an heir — heirBps stays null
+        } catch (e) {
+            console.error('[heir fetch error]', e)
+        }
+
+        // ✅ separate try — debug preflight doesn't affect heir detection
+        try {
+            const vaultInfo = await connection.getAccountInfo(vaultPda)
+            if (vaultInfo) {
+                const rentExempt = await connection.getMinimumBalanceForRentExemption(vaultInfo.data.length)
+                const totalBal = willData.totalBal
+                const bps = heirBps ?? 0
+                const solAmount = Math.floor((totalBal * bps) / 10000)
+                const vaultLamports = vaultInfo.lamports
+                const spendable = vaultLamports - rentExempt
+                console.log('━━━━━━ claim pre-flight ━━━━━━')
+                console.log('total_bal (stored):  ', totalBal)
+                console.log('vault actual lamps:  ', vaultLamports)
+                console.log('min rent:            ', rentExempt)
+                console.log('spendable:           ', spendable)
+                console.log('sol_amount:          ', solAmount)
+                console.log('overflow?:           ', solAmount > spendable)
+                console.log('drift:               ', totalBal - spendable)
+            }
+        } catch (e) {
+            console.error('[preflight error]', e)
         }
     }
 
@@ -197,7 +227,9 @@ export function useClaimWill() {
                 // ── Fetch on-chain will account ──────────────────────────
                 const willData = await program.account.willAccount.fetch(willPda) as any
                 const onChainAssets = willData.assets as Array<{ mint: PublicKey }>
-
+                console.log("assets:", willData.assets[0].balance.toNumber())
+                console.log("hasSol:", willData.hasSol)
+                console.log("totalBal:", willData.totalBal)
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
                 console.log('[claimWill] on-chain will account:')
                 console.log('  willPda:      ', willPda.toBase58())
@@ -205,49 +237,39 @@ export function useClaimWill() {
                 console.log('  assets.len(): ', onChainAssets.length)
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
-                // ── Build asset remaining accounts (4 per token) ─────────
-                const assetAccounts: { pubkey: PublicKey; isSigner: boolean; isWritable: boolean }[] = []
-
-                await Promise.all(
+                // ✅ replace Promise.all + push with ordered mapping
+                const results = await Promise.all(
                     onChainAssets.map(async (asset, idx) => {
                         const mintPk = new PublicKey(asset.mint)
-
                         const mintInfo = await connection.getAccountInfo(mintPk)
-                        if (!mintInfo) {
-                            console.warn(`[claimWill] asset[${idx}] mint not found on-chain:`, mintPk.toBase58())
-                            return
-                        }
+                        if (!mintInfo) return null
 
-                        const tokenProgramId = mintInfo.owner.toBase58() === TOKEN_2022_PROGRAM_ID.toBase58()
+                        const tokenProgramId = mintInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
                             ? TOKEN_2022_PROGRAM_ID
                             : TOKEN_PROGRAM_ID
 
-                        console.log(`[claimWill] asset[${idx}] using token program:`, tokenProgramId.toBase58())
-
                         const vaultAta = getAssociatedTokenAddressSync(mintPk, vaultPda, true, tokenProgramId)
                         const heirAta = getAssociatedTokenAddressSync(mintPk, claimerPk, false, tokenProgramId)
-
                         const vaultAtaInfo = await connection.getAccountInfo(vaultAta)
-                        console.log(`  mint:            `, mintPk.toBase58())
-                        console.log(`  vaultAta:        `, vaultAta.toBase58())
-                        console.log(`  heirAta:         `, heirAta.toBase58())
-                        console.log(`  tokenProgram:    `, tokenProgramId.toBase58())
-                        console.log(`  vaultAta exists: `, !!vaultAtaInfo)
 
                         if (!vaultAtaInfo) {
-                            console.warn(`[claimWill] skipping — vault ATA not initialized`)
-                            return
+                            console.warn(`[claimWill] asset[${idx}] vault ATA not found — skipping`)
+                            return null
                         }
 
-                        assetAccounts.push(
+                        return [
                             { pubkey: vaultAta, isSigner: false, isWritable: true },
                             { pubkey: heirAta, isSigner: false, isWritable: true },
                             { pubkey: mintPk, isSigner: false, isWritable: false },
-                            { pubkey: tokenProgramId, isSigner: false, isWritable: false }, // ✅ 4th account
-                        )
+                            { pubkey: tokenProgramId, isSigner: false, isWritable: false },
+                        ]
                     })
                 )
 
+                // ✅ filter nulls, flatten in original index order
+                const assetAccounts = results
+                    .filter((r): r is NonNullable<typeof r> => r !== null)
+                    .flat()
                 // ── Final count check ────────────────────────────────────
                 const expectedCount = onChainAssets.length * 4  // ✅ 4 per token
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -286,6 +308,8 @@ export function useClaimWill() {
                     tx.serialize({ requireAllSignatures: false, verifySignatures: false })
                 )
 
+                const logs = await connection.simulateTransaction(tx)
+                console.log(`LOGS`, logs)
                 let signature: string
                 try {
                     const result = await raw.signAndSendTransaction({

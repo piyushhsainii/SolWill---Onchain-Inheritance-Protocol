@@ -28,13 +28,15 @@ pub struct Claim<'info> {
         seeds=[b"vault" , will_account.key().as_ref()],
         bump
     )]
-    vault_account:Account<'info, Vault>,
+vault_account: UncheckedAccount<'info>,
     system_program:Program<'info, System>,
     associated_token_program:Program<'info, AssociatedToken>
 }
 
 
 pub fn claim<'info>(ctx:Context<'_, '_, 'info, 'info, Claim<'info>>) -> Result<()> {
+    msg!("entered claim");
+
     // check if deadline has passed
     let current_time = Clock::get()?.unix_timestamp;
     let will_account = ctx.accounts.will_account.clone();
@@ -53,27 +55,49 @@ pub fn claim<'info>(ctx:Context<'_, '_, 'info, 'info, Claim<'info>>) -> Result<(
 
     let will_account_key = will_account.key();
     let seeds:&[&[&[u8]]] = &[&[b"vault", will_account_key.as_ref(), &[ctx.bumps.vault_account]]];
-    let vault =  &ctx.accounts.vault_account;
-    
-    let sol_amount = vault.sol_balance.checked_mul(heir_account.bps as u64).ok_or(Errors::Math_Error)?.checked_div(10000).ok_or(Errors::Math_Error)?;
+    let vault: &UncheckedAccount<'info> =  &ctx.accounts.vault_account;
+    msg!("entered claim");
+
+   let sol_amount = (will_account.total_bal as u64)
+    .checked_mul(heir_account.bps as u64)
+    .ok_or(Errors::Math_Error)?
+    .checked_div(10000)
+    .ok_or(Errors::Math_Error)?;
+
+    if will_account.has_sol {
+    let sol_amount = (will_account.total_bal as u64)
+        .checked_mul(heir_account.bps as u64)
+        .ok_or(Errors::Math_Error)?
+        .checked_div(10000)
+        .ok_or(Errors::Math_Error)?;
+
     require!(sol_amount > 0, Errors::Math_Error);
-    // transfer the sol amount to the heir
 
-    let ix = CpiContext::new_with_signer(program,
-    system_program::Transfer {
-        from: vault.to_account_info(),
-        to: ctx.accounts.heir_account_address.to_account_info()
-    },
-    seeds
+    let vault_info = ctx.accounts.vault_account.to_account_info();
+    let vault_data_len = vault_info.data_len();
+    let min_rent = Rent::get()?.minimum_balance(vault_data_len);
+    let vault_lamports = vault_info.lamports();
+
+    require!(
+        vault_lamports.checked_sub(sol_amount).ok_or(Errors::Math_Error)? >= min_rent,
+        Errors::InsufficientFundsForRent
     );
-    system_program::transfer(ix, sol_amount)?;  
+  msg!("before lamport borrow");
+    **ctx.accounts.vault_account.to_account_info().try_borrow_mut_lamports()? -= sol_amount;
+    **ctx.accounts.heir_account_address.to_account_info().try_borrow_mut_lamports()? += sol_amount;
+  msg!("after lamport borrow");
 
-    ctx.accounts.heir_account.status = HeirStatus::Claimed;
+}
+
+ctx.accounts.heir_account.status = HeirStatus::Claimed;
+  msg!("before len");
 
     // handle spl tokens transfer
     // ensures
    require!(assets.len() * 4 == accounts.len(), Errors::ClaimFundsAccountsNotValid);
-require!(accounts.len() % 4 == 0, Errors::ClaimFundsAccountsNotValid);
+   require!(accounts.len() % 4 == 0, Errors::ClaimFundsAccountsNotValid);
+  msg!("after len");
+
 
 let mut i = 0;
 let mut processed_mints: Vec<Pubkey> = Vec::new();
@@ -85,7 +109,7 @@ while i < accounts.len() {
     let heir_ata   = &accounts[i + 1];
     let vault_mint = &accounts[i + 2];
     let token_prog = &accounts[i + 3]; // 
-
+     msg!("inside loop");
     require!(
         token_prog.key() == anchor_spl::token::ID
             || token_prog.key() == anchor_spl::token_2022::ID,

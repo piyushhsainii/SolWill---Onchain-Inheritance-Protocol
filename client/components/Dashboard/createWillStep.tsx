@@ -53,7 +53,7 @@ function Spinner() {
 }
 
 /* ─── Component ─────────────────────────────────────────────────── */
-const INTERVALS = [7, 14, 30, 60, 90]
+const INTERVALS = [1, 3, 7, 14, 30, 60, 90]
 
 export default function CreateWillStep({
     onComplete,
@@ -71,10 +71,6 @@ export default function CreateWillStep({
 
     const variants = dir === 'forward' ? slideRight : slideLeft
 
-    // const handleSubmit = async () => {
-    //     await createWill(intervalDays)
-    //     onComplete(intervalDays)
-    // }
 
     return (
         <motion.div variants={variants} initial="hidden" animate="show" exit="exit">

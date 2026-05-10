@@ -20,7 +20,7 @@ import { useAnchor } from '@/app/(protected)/layout'
 import { DeadWallet } from '../idl/idl'
 import { getTokenProgramForMint } from '../utils/helper'
 
-const PROGRAM_ID = new PublicKey('FCLjiGPR8s4oxSi4jMd4Ra1SsJzxuN5FXq5zw8ueTsRE')
+const PROGRAM_ID = new PublicKey('DBtGHctsxjb6NdEsXE5MmQFfFRm5LK1qEKZ7FqueTuxi')
 const WILL_SEED = Buffer.from('will')
 const VAULT_SEED = Buffer.from('vault')
 const RPC_URL = clusterApiUrl('devnet')

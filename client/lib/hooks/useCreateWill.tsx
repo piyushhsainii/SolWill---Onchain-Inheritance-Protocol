@@ -24,7 +24,7 @@ import { useAnchor } from '@/app/(protected)/layout'
 import { DeadWallet } from '../idl/idl'
 
 const PROGRAM_ID = new PublicKey(
-    'FCLjiGPR8s4oxSi4jMd4Ra1SsJzxuN5FXq5zw8ueTsRE'
+    'DBtGHctsxjb6NdEsXE5MmQFfFRm5LK1qEKZ7FqueTuxi'
 )
 
 const WILL_SEED = Buffer.from('will')
@@ -74,8 +74,11 @@ export function useCreateWill() {
 
                 const ownerPk = publicKey
                 const intervalSeconds = new BN(
-                    Math.floor(intervalDays * 86400)
+                    Math.floor(10 * 60)
                 )
+                // const intervalSeconds = new BN(
+                //     Math.floor(intervalDays * 86400)
+                // )
 
                 const [willPda] = PublicKey.findProgramAddressSync(
                     [WILL_SEED, ownerPk.toBuffer()],
