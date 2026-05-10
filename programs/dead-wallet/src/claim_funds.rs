@@ -28,138 +28,149 @@ pub struct Claim<'info> {
         seeds=[b"vault" , will_account.key().as_ref()],
         bump
     )]
-vault_account: UncheckedAccount<'info>,
+    vault_account: Account<'info, Vault>,
     system_program:Program<'info, System>,
     associated_token_program:Program<'info, AssociatedToken>
 }
 
 
-pub fn claim<'info>(ctx:Context<'_, '_, 'info, 'info, Claim<'info>>) -> Result<()> {
-    msg!("entered claim");
+pub fn claim<'info>(
+    ctx: Context<'_, '_, 'info, 'info, Claim<'info>>,
+) -> Result<()> {
 
-    // check if deadline has passed
-    let current_time = Clock::get()?.unix_timestamp;
-    let will_account = ctx.accounts.will_account.clone();
-    let heir_account = ctx.accounts.heir_account.clone();
-    let assets = ctx.accounts.will_account.assets.clone();
-    let program = ctx.accounts.system_program.to_account_info().clone();
+    let clock = Clock::get()?;
+    let will = ctx.accounts.will_account.clone();
+    let heir = ctx.accounts.heir_account.clone();
+
+    // validations
+    require!(
+        clock.unix_timestamp > will.last_check_in + will.interval,
+        Errors::Will_Active
+    );
+    require!(!will.claimed, Errors::Will_Already_Claimed);
+    require!(heir.status == HeirStatus::Active, Errors::Will_Already_Claimed);
+    require!(
+        heir.wallet_address == ctx.accounts.heir_account_address.key(),
+        Errors::Heir_Not_Valid
+    );
+
     let accounts = ctx.remaining_accounts;
-    require!(current_time > will_account.last_check_in + will_account.interval, Errors::Will_Active);
+    let assets = will.assets.clone();
 
-    //check to ensure that will is not already Claimed
-    require!(will_account.claimed != true, Errors::Will_Already_Claimed);
-    require!(heir_account.status == HeirStatus::Active, Errors::Will_Already_Claimed);
+    require!(accounts.len() % 4 == 0, Errors::ClaimFundsAccountsNotValid);
+    require!(assets.len() * 4 == accounts.len(), Errors::ClaimFundsAccountsNotValid);
 
-    // check if given heir_account_address matches the one stored in config of heir account
-    require!(heir_account.wallet_address == ctx.accounts.heir_account_address.key(), Errors::Heir_Not_Valid);
+    let will_key = will.key();
+    let signer_seeds: &[&[&[u8]]] = &[&[
+        b"vault",
+        will_key.as_ref(),
+        &[ctx.bumps.vault_account],
+    ]];
 
-    let will_account_key = will_account.key();
-    let seeds:&[&[&[u8]]] = &[&[b"vault", will_account_key.as_ref(), &[ctx.bumps.vault_account]]];
-    let vault: &UncheckedAccount<'info> =  &ctx.accounts.vault_account;
-    msg!("entered claim");
+    // =========================
+    // 🪙 SPL TRANSFERS FIRST (all CPIs)
+    // =========================
+    let mut i = 0;
+    let mut processed_mints: Vec<Pubkey> = Vec::new();
 
-   let sol_amount = (will_account.total_bal as u64)
-    .checked_mul(heir_account.bps as u64)
-    .ok_or(Errors::Math_Error)?
-    .checked_div(10000)
-    .ok_or(Errors::Math_Error)?;
+    while i < accounts.len() {
+        let vault_ata  = &accounts[i];
+        let heir_ata   = &accounts[i + 1];
+        let mint_acc   = &accounts[i + 2];
+        let token_prog = &accounts[i + 3];
 
-    if will_account.has_sol {
-    let sol_amount = (will_account.total_bal as u64)
-        .checked_mul(heir_account.bps as u64)
-        .ok_or(Errors::Math_Error)?
-        .checked_div(10000)
-        .ok_or(Errors::Math_Error)?;
-
-    require!(sol_amount > 0, Errors::Math_Error);
-
-    let vault_info = ctx.accounts.vault_account.to_account_info();
-    let vault_data_len = vault_info.data_len();
-    let min_rent = Rent::get()?.minimum_balance(vault_data_len);
-    let vault_lamports = vault_info.lamports();
-
-    require!(
-        vault_lamports.checked_sub(sol_amount).ok_or(Errors::Math_Error)? >= min_rent,
-        Errors::InsufficientFundsForRent
-    );
-  msg!("before lamport borrow");
-    **ctx.accounts.vault_account.to_account_info().try_borrow_mut_lamports()? -= sol_amount;
-    **ctx.accounts.heir_account_address.to_account_info().try_borrow_mut_lamports()? += sol_amount;
-  msg!("after lamport borrow");
-
-}
-
-ctx.accounts.heir_account.status = HeirStatus::Claimed;
-  msg!("before len");
-
-    // handle spl tokens transfer
-    // ensures
-   require!(assets.len() * 4 == accounts.len(), Errors::ClaimFundsAccountsNotValid);
-   require!(accounts.len() % 4 == 0, Errors::ClaimFundsAccountsNotValid);
-  msg!("after len");
-
-
-let mut i = 0;
-let mut processed_mints: Vec<Pubkey> = Vec::new();
-let wallet_key = will_account.key();
-let signer_seeds: &[&[&[u8]]] = &[&[b"vault", wallet_key.as_ref(), &[ctx.bumps.vault_account]]];
-
-while i < accounts.len() {
-    let vault_ata  = &accounts[i];
-    let heir_ata   = &accounts[i + 1];
-    let vault_mint = &accounts[i + 2];
-    let token_prog = &accounts[i + 3]; // 
-     msg!("inside loop");
-    require!(
-        token_prog.key() == anchor_spl::token::ID
-            || token_prog.key() == anchor_spl::token_2022::ID,
-        Errors::InvalidTokenProgram
-    );
-    require!(vault_ata.owner == &token_prog.key(), Errors::InvalidTokenProgram);
-
-    let vault_data      = InterfaceAccount::<TokenAccount>::try_from(vault_ata)?;
-    let vault_mint_info = InterfaceAccount::<Mint>::try_from(vault_mint)?;
-
-    require!(!processed_mints.contains(&vault_mint.key()), Errors::MintAccountNotValid);
-    require!(assets.iter().any(|data| data.mint == vault_data.mint), Errors::MintAccountNotValid);
-    require!(vault_data.mint == vault_mint.key(), Errors::MintAccountNotValid);
-    require!(!vault_ata.data_is_empty(), Errors::VaultATAInvalid);
-
-    if heir_ata.data_is_empty() {
-        let cpi_accounts = associated_token::Create {
-            associated_token: heir_ata.to_account_info(),
-            authority: ctx.accounts.heir_account_address.to_account_info(),
-            mint: vault_mint.to_account_info(),
-            payer: ctx.accounts.signer.to_account_info(),
-            system_program: ctx.accounts.system_program.to_account_info(),
-            token_program: token_prog.to_account_info(), // ✅
-        };
-        let cpi_ctx = CpiContext::new(
-            ctx.accounts.associated_token_program.to_account_info(),
-            cpi_accounts
+        require!(
+            token_prog.key() == anchor_spl::token::ID
+                || token_prog.key() == anchor_spl::token_2022::ID,
+            Errors::InvalidTokenProgram
         );
-        associated_token::create(cpi_ctx)?;
+
+        let vault_data = InterfaceAccount::<TokenAccount>::try_from(vault_ata)?;
+        let mint_data  = InterfaceAccount::<Mint>::try_from(mint_acc)?;
+
+        require!(!processed_mints.contains(&mint_acc.key()), Errors::MintAccountNotValid);
+        require!(assets.iter().any(|a| a.mint == vault_data.mint), Errors::MintAccountNotValid);
+        require!(vault_data.mint == mint_acc.key(), Errors::MintAccountNotValid);
+        require!(vault_data.owner == ctx.accounts.vault_account.key(), Errors::VaultATAInvalid);
+
+        // Create heir ATA if needed (CPI)
+        if heir_ata.data_is_empty() {
+            associated_token::create(CpiContext::new(
+                ctx.accounts.associated_token_program.to_account_info(),
+                associated_token::Create {
+                    associated_token: heir_ata.to_account_info(),
+                    authority: ctx.accounts.heir_account_address.to_account_info(),
+                    mint: mint_acc.to_account_info(),
+                    payer: ctx.accounts.signer.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                    token_program: token_prog.to_account_info(),
+                },
+            ))?;
+        }
+
+        let asset = assets
+            .iter()
+            .find(|a| a.mint == vault_data.mint)
+            .ok_or(Errors::MintAccountNotValid)?;
+
+        let user_share = asset.balance
+            .checked_mul(heir.bps as u64)
+            .ok_or(Errors::Math_Error)?
+            .checked_div(10000)
+            .ok_or(Errors::Math_Error)?;
+
+        require!(user_share > 0, Errors::Math_Error);
+
+        // SPL transfer (CPI)
+        transfer_checked(
+            CpiContext::new_with_signer(
+                token_prog.to_account_info(),
+                TransferChecked {
+                    from:      vault_ata.to_account_info(),
+                    to:        heir_ata.to_account_info(),
+                    authority: ctx.accounts.vault_account.to_account_info(),
+                    mint:      mint_acc.to_account_info(),
+                },
+                signer_seeds,
+            ),
+            user_share,
+            mint_data.decimals,
+        )?;
+
+        processed_mints.push(mint_acc.key());
+        i += 4;
     }
 
-    let total_spl_balance = assets.iter().find(|data| data.mint == vault_data.mint).ok_or(Errors::MintAccountNotValid)?;
-    let user_share = total_spl_balance.balance
-        .checked_mul(ctx.accounts.heir_account.bps as u64).ok_or(Errors::Math_Error)?
-        .checked_div(10000).ok_or(Errors::Math_Error)?;
-    require!(user_share > 0, Errors::Math_Error);
+    // =========================
+    // 💰 SOL TRANSFER LAST (raw lamports, no CPI after this)
+    // =========================
+    if will.has_sol {
+        let sol_amount = (will.total_bal as u64)
+            .checked_mul(heir.bps as u64)
+            .ok_or(Errors::Math_Error)?
+            .checked_div(10000)
+            .ok_or(Errors::Math_Error)?;
 
-    let spl_token_ix = CpiContext::new_with_signer(
-        token_prog.to_account_info(), // ✅
-        TransferChecked {
-            from:      vault_ata.to_account_info(),
-            to:        heir_ata.to_account_info(),
-            authority: ctx.accounts.vault_account.to_account_info(),
-            mint:      vault_mint.to_account_info(),
-        },
-        signer_seeds,
-    );
-    transfer_checked(spl_token_ix, user_share, vault_mint_info.decimals)?;
-    processed_mints.push(vault_mint.key());
-    i += 4; // ✅
-} 
+        require!(sol_amount > 0, Errors::Math_Error);
+
+let vault_info = ctx.accounts.vault_account.to_account_info();
+        let min_rent = Rent::get()?.minimum_balance(vault_info.data_len());
+
+        require!(
+            vault_info.lamports().checked_sub(sol_amount).ok_or(Errors::Math_Error)? >= min_rent,
+            Errors::InsufficientFundsForRent
+        );
+
+        **vault_info.try_borrow_mut_lamports()? -= sol_amount;
+        **ctx.accounts.heir_account_address
+            .to_account_info()
+            .try_borrow_mut_lamports()? += sol_amount;
+    }
+
+    // No CPIs after this point ✅
+    ctx.accounts.heir_account.status = HeirStatus::Claimed;
+    ctx.accounts.will_account.claimed = true;
+
+    msg!("claim complete");
     Ok(())
 }

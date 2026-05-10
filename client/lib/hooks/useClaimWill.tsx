@@ -23,7 +23,7 @@ import { DeadWallet } from '../idl/idl'
 import { getTokenProgramForMint } from '../utils/helper'
 import { getAssociatedTokenAddressSync, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 
-const PROGRAM_ID = new PublicKey('DBtGHctsxjb6NdEsXE5MmQFfFRm5LK1qEKZ7FqueTuxi')
+const PROGRAM_ID = new PublicKey('94mrbz1UZeW7mpZsr7W74QinPM1yvfmrN4oQMKYFhbLx')
 const WILL_SEED = Buffer.from('will')
 const VAULT_SEED = Buffer.from('vault')
 const HEIR_SEED = Buffer.from('heir')

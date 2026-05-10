@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/dead_wallet.json`.
  */
 export type DeadWallet = {
-  "address": "DBtGHctsxjb6NdEsXE5MmQFfFRm5LK1qEKZ7FqueTuxi",
+  "address": "94mrbz1UZeW7mpZsr7W74QinPM1yvfmrN4oQMKYFhbLx",
   "metadata": {
     "name": "deadWallet",
     "version": "0.1.0",
